@@ -1,0 +1,119 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>8.0.30703</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{7F263560-43D0-4B51-8D48-B46F3B0329FC}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>tud.mci.tangram.TangramLector</RootNamespace>
+    <AssemblyName>Tangram_InteractionManger</AssemblyName>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Interaction Manager\AbstractInteractionEventProxy.cs" />
+    <Compile Include="Interaction Manager\AdapterMediators\BrailleIOButtonMediatorFactory.cs" />
+    <Compile Include="Interaction Manager\AdapterMediators\IBrailleIOButtonMediator.cs" />
+    <Compile Include="Interaction Manager\InteractionContextProxyComparer.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Functions\ScriptFunctionProxy.cs" />
+    <Compile Include="Functions\ScriptFunctionProxy_BrailleKeyboard.cs" />
+    <Compile Include="BrailleKeyboard\BrailleKeyboard.cs" />
+    <Compile Include="BrailleKeyboard\BrailleKeyboardInput.cs" />
+    <Compile Include="Functions\ScriptFunctionProxy_SpecializedProxies.cs" />
+    <Compile Include="Functions\SpecializedFunctionProxies\AbstractSpecializedFunctionProxyBase.cs" />
+    <Compile Include="Interaction Manager\AdapterMediators\AbstractBrailleIOButtonMediatorBase.cs" />
+    <Compile Include="Interaction Manager\IInteractionContextProxy.cs" />
+    <Compile Include="Interaction Manager\IInteractionEventProxy.cs" />
+    <Compile Include="Interaction Manager\InteractionManager.cs" />
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="Submodules\BrailleIO\BrailleIO\BrailleIO.csproj">
+      <Project>{623E618C-F034-473E-A5AF-280B20A5BA8F}</Project>
+      <Name>BrailleIO</Name>
+    </ProjectReference>
+    <ProjectReference Include="Submodules\BrailleIO\BrailleIO_Interfaces\BrailleIO_Interfaces.csproj">
+      <Project>{168EC2F2-7E4A-493A-AB4A-9FB1B45DAB64}</Project>
+      <Name>BrailleIO_Interfaces</Name>
+    </ProjectReference>
+    <ProjectReference Include="Submodules\BrailleIO\GestureRecognizer\GestureRecognizer.csproj">
+      <Project>{73BD1F41-CE19-40DE-A0EC-A70A9F003DEC}</Project>
+      <Name>GestureRecognizer</Name>
+    </ProjectReference>
+    <ProjectReference Include="Submodules\DotNet_AudioRenderer\AudioRenderer.csproj">
+      <Project>{c0f2d4e2-fc99-4218-b877-1d217fbf0437}</Project>
+      <Name>AudioRenderer</Name>
+    </ProjectReference>
+    <ProjectReference Include="Submodules\DotNet_Extensibility\Extensibility.csproj">
+      <Project>{099822ce-b83a-4275-80ef-ab2d8c5792cd}</Project>
+      <Name>Extensibility</Name>
+    </ProjectReference>
+    <ProjectReference Include="Submodules\DotNet_LanguageLocalization\LanguageLocalization.csproj">
+      <Project>{f5ba9f00-fdbe-4329-9155-4cb3eadbc772}</Project>
+      <Name>LanguageLocalization</Name>
+    </ProjectReference>
+    <ProjectReference Include="Submodules\DotNet_Logger\Logger.csproj">
+      <Project>{7283a0e4-f653-4097-b5f5-660bc570dcbd}</Project>
+      <Name>Logger</Name>
+    </ProjectReference>
+    <ProjectReference Include="Submodules\Tangram_Interfaces\Tangram_Interfaces.csproj">
+      <Project>{c4724649-0889-491a-bfbd-cf9bf7ba2e1e}</Project>
+      <Name>Tangram_Interfaces</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Resources\Language.xml">
+      <SubType>Designer</SubType>
+    </Content>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it.
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
