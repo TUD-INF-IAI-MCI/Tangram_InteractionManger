@@ -63,15 +63,15 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="Submodules\BrailleIO\BrailleIO\BrailleIO.csproj">
+    <ProjectReference Include="Submodules\Tangram_Interfaces\Submodules\BrailleIO\BrailleIO\BrailleIO.csproj">
       <Project>{623E618C-F034-473E-A5AF-280B20A5BA8F}</Project>
       <Name>BrailleIO</Name>
     </ProjectReference>
-    <ProjectReference Include="Submodules\BrailleIO\BrailleIO_Interfaces\BrailleIO_Interfaces.csproj">
+    <ProjectReference Include="Submodules\Tangram_Interfaces\Submodules\BrailleIO\BrailleIO_Interfaces\BrailleIO_Interfaces.csproj">
       <Project>{168EC2F2-7E4A-493A-AB4A-9FB1B45DAB64}</Project>
       <Name>BrailleIO_Interfaces</Name>
     </ProjectReference>
-    <ProjectReference Include="Submodules\BrailleIO\GestureRecognizer\GestureRecognizer.csproj">
+    <ProjectReference Include="Submodules\Tangram_Interfaces\Submodules\BrailleIO\GestureRecognizer\GestureRecognizer.csproj">
       <Project>{73BD1F41-CE19-40DE-A0EC-A70A9F003DEC}</Project>
       <Name>GestureRecognizer</Name>
     </ProjectReference>
