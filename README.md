@@ -15,12 +15,12 @@ Make the usage of [BrailleIO](https://github.com/TUD-INF-IAI-MCI/BrailleIO) hard
 --	TODO: build a small workflow
 
 
-
-
 ### Submodules
 Keep attention to get and update all the embedded submodules. Sometimes it seems to be necessary to update the submodules resources – do not submit this to the main branch of submodule
 
-**TIP:** When doing submodule updates use the option **recursive** to get all submodules of the submodules!!!
+**TIP:** When doing submodule updates use the option **recursive** to get all submodules of the submodules!!! (`git submodule update --init --recursive`)
+
+**TIP:** For checkim out the repository, do also use the **recursice** option (`git clone --recursive git://github.com/mysociety/whatdotheyknow.git`)
 
 - [DotNet_AudioRenderer](https://github.com/TUD-INF-IAI-MCI/DotNet_AudioRenderer) - audio renderer for speech output
 - [DotNet_Extensibility](https://github.com/TUD-INF-IAI-MCI/DotNet_Extensibility) - extension framework for easy extensibility
