@@ -107,7 +107,7 @@ The buttons "k1","k2","k3","k4","k5","k6","k7" and "k8" (of a Braille-keyboard-l
 
 Several standard key commands for text-work are defined. Therefor some additional function keys are necessary (commonly they are lying in between the both button groups for the left and the right hand are activated with the thumbs).
 
-![Example of a BrailleKeyboard with 12 keys (from left to right): k7, k3, k2, k1, l, lr, rl, r, k4, k5, k6, k8](Images/Braille-Keyboard.svg)
+![Example of a BrailleKeyboard with 12 keys (from left to right): k7, k3, k2, k1, l, lr, rl, r, k4, k5, k6, k8](/doc_imgs/Braille-Keyboard.svg)
 
 
 #### Commands
