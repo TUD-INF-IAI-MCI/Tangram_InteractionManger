@@ -29,7 +29,7 @@ Manipulation | 8 | Manipulation mode was activated - elements e.g. in a document
 
 #### How it works
 
-The InteractionManager is a mediator between interactions of an `IBrailleIOAdapter` from the [BrailleIO framework] ](https://github.com/TUD-INF-IAI-MCI/BrailleIO) and handlers for button-, **button-combinations**, gesture or Braille-text-inputs.
+The InteractionManager is a mediator between interactions of an `IBrailleIOAdapter` from the [BrailleIO framework](https://github.com/TUD-INF-IAI-MCI/BrailleIO) and handlers for button-, **button-combinations**, gesture or Braille-text-inputs.
 
 Therefor you have to register available input devices (`BrailleIO. IBrailleIOAdapter`) to the InteractionManager by using the method
 
