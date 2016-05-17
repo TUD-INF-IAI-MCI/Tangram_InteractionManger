@@ -44,14 +44,121 @@ Automatically the `InteractionManager` registers to the devices’ input events,
 
 The `ScriptFunctionProxy` allows adding specialized interaction handlers that can be activated and deactivate based on the current application state or context. 
 
-The `ScriptFunctionProxy` forwards interaction events, such as button combinations etc., to registered specialized function proxies implementing the `IInteractionContextProxy` interface. Those specialized function proxies have to take care about their activation and deactivation based on the current application context. The specialized function proxies are ordered and are called in a cascading way. So the can handle the same input command but are called one after another based on the ordering (ZIndex – as higher as earlier it is called).
+The `ScriptFunctionProxy` forwards interaction events, such as button combinations etc., to registered specialized function proxies implementing the `IInteractionContextProxy` interface. Those specialized function proxies have to take care about their activation and deactivation based on the current application context. The specialized function proxies are ordered and are called in a cascading way. So the can handle the same input command but are called one after another based on the ordering (`ZIndex` – as higher as earlier it is called).
 
 It has to be initialized with an `InteractionManager` instance to register to the available interaction events. 
 
+### BrailleKeyboard
+
+The BrailleKeyboard allows translating a Unicode sign or a character into a dot-pattern representation and vice-versa. Basically loaded is the Unicode Braille-char part that will be overwritten by the given *.cti translation table, based on the definitions of the [**liblouis** project]( https://github.com/liblouis).
+
+#### How to use
+
+Set up a new BrailleKeyboard and load a Braille-Char to dot-pattern translation table
+
+``` C#
+// in this example the German translation table is loaded
+public readonly Control.BrailleKeyboard BrailleKeyboard = new tud.mci.tangram.TangramLector.Control.BrailleKeyboard(tud.mci.tangram.TangramLector.Control.BrailleKeyboard.GetCurrentDllDirectory() + @"/config/tables/de-chardefs8.cti");
+```
+
+Now you can ask for a character from a specific dot pattern
+
+``` C#
+String c = BrailleKeyboard.GetCharFromDots("14"); // will return "c"
+```
+
+Or you can ask for the dot pattern of a specific character
+
+``` C#
+String pattern = BrailleKeyboard.GetDotsForChar('g'); // will return "1245"
+```
+
+### BrailleKeyboardInput
+
+The `BrailleKeyboardInput` is some kind of *virtual text-input field* that can be filled with text, holds a cursor/caret for defining the input position and allows for other text-works operations.
+
+The `BrailleKeyboardInput` is automatically registered to the Braille-keyboard events of the global singleton `ScriptFunctionProxy` instance:
+
+``` C#
+        /// <summary>
+        /// Occurs when a single BrailleKeyboard letter was entered.
+        /// </summary>
+        public event EventHandler<BrailleKeyboardEventArgs> BrailleKeyboardKey;
+        /// <summary>
+        /// Occurs when a complex braille keyboard command was entered.
+        /// </summary>
+        public event EventHandler<BrailleKeyboardCommandEventArgs> BrailleKeyboardCommand;
+```
+
+
+
+#### Caret handling
+
+The input-cursor or caret is the position where text is entered if no text-input position is defined. The caret can be moved or set to a fixed position inside the text.
+
+Actions can be registered to hook the caret moving functions (left, right, up, down, etc.) to adapt the handling if necessary.
+
+
+### BrailleKeyboard handling in the InteractionManager
+
+The Braille keyboard available at the `InteractionManager` in combination with the `ScriptFunctionProxy` interprets button combinations from the BrailleDis like key settings to either Braille charters or Keyboard interaction commands.
+
+The buttons "k1","k2","k3","k4","k5","k6","k7" and "k8" (of a Braille-keyboard-like button-layout) will be transformed into the corresponding dot in the Braille character dot-pattern.
+
+Several standard key commands for text-work are defined. Therefor some additional function keys are necessary (commonly they are lying in between the both button groups for the left and the right hand are activated with the thumbs).
+
+![Example of a BrailleKeyboard with 12 keys (from left to right): k7, k3, k2, k1, l, lr, rl, r, k4, k5, k6, k8](Images/Braille-Keyboard.svg)
+
+
+#### Commands
+
+Description | Button code | Implemented in `tud.mci.tangram.TangramLector.Control.BrailleKeyboardInput`?
+------------|-------------|--------------
+`Return` / next Line | `k8` | yes ("\r\n")
+`Space` | `lr` or `rl` | yes
+`Del. ` | `Space` + `k5` + `k6` | yes
+`Backspace` | `lr` + `rl` | yes
+`ESC` | `Space` + `k7` | no
+`Ctrl. ` commands | ... + `k7` + `k8` (e.g. `Ctrl.`+C = `k1` + `k4` + `k7` + `k8`) | only `Ctrl.`+V
+Mark text | `Ctr.`+T to set start- and endpoint = `k2` + `k3` + `k4` + `k5` + `k7` + `k8` | no
+Unmark text | `ESC` = `Space` + `k7` | no
+Move cursor left | `Space` + `k1` | yes
+Move cursor right | `Space` + `k4` | yes
+Move cursor up | `Space` + `k2` | partial (-36 chars)
+Move cursor down | `Space` + `k5` | partial (+36 chars)
+Page up (25 lined up) | `Space` + `k3` | no
+Page down (25 lines down) | `Space` + `k6` | no
+`Pos1` (start of line) | `Space` + `k1` + `k2` | partial (Start pos of whole text)
+`End` (end of line) | `Space` + `k5` + `k5` | partial (last pos of whole text)
+`Tab` | `Space` + `k4` + `k5` + `k6` | yes
+`Shift` + `Tab` | `Space` + `k1` + `k2` + `k3` | yes
+
+
+#### How to use
+
+The `BrailleKeyboardInput` of the `InteractionManager` instance is global available by calling
+
+``` C#
+BrailleKeyboardInput input = InteractionManager.Instance.BKI;
+```
+
+To activate the Braille interpretation you have to switch the to the Braille mode
+
+``` C#
+InteractionManager.Instance.Mode = InteractionMode.Braille
+```
+
+**ATTENTION** you have to clear the `BrailleKeyboardInput` before allowing to write a new text. Otherwise, the currently set text will be extended.
+
+``` C#
+// get the current text input
+String text = InteractionManager.Instance.BKI.Input;
+
+// clear the text input
+InteractionManager.Instance.BKI.Reset();
+```
+
 ## How to use:
-
-
---	TODO: build a small workflow
 
 ### Basic Set-Up
 
