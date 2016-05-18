@@ -1,6 +1,6 @@
-[submodule "Submodules/BrailleIO"]
-	path = Submodules/BrailleIO
-	url = https://github.com/TUD-INF-IAI-MCI/BrailleIO.git
+[submodule "Submodules/DotNet_Extensibility"]
+	path = Submodules/DotNet_Extensibility
+	url = https://github.com/TUD-INF-IAI-MCI/DotNet_Extensibility.git
 [submodule "Submodules/DotNet_LanguageLocalization"]
 	path = Submodules/DotNet_LanguageLocalization
 	url = https://github.com/TUD-INF-IAI-MCI/DotNet_LanguageLocalization.git
@@ -13,6 +13,6 @@
 [submodule "Submodules/Tangram_Interfaces"]
 	path = Submodules/Tangram_Interfaces
 	url = https://github.com/TUD-INF-IAI-MCI/Tangram_Interfaces.git
-[submodule "Submodules/DotNet_Extensibility"]
-	path = Submodules/DotNet_Extensibility
-	url = https://github.com/TUD-INF-IAI-MCI/DotNet_Extensibility.git
+[submodule "Submodules/BrailleIO"]
+	path = Submodules/BrailleIO
+	url = https://github.com/TUD-INF-IAI-MCI/BrailleIO.git
