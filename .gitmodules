@@ -13,3 +13,6 @@
 [submodule "Submodules/Tangram_Interfaces"]
 	path = Submodules/Tangram_Interfaces
 	url = https://github.com/TUD-INF-IAI-MCI/Tangram_Interfaces.git
+[submodule "Submodules/BrailleIO"]
+	path = Submodules/BrailleIO
+	url = https://github.com/TUD-INF-IAI-MCI/BrailleIO.git

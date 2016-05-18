@@ -234,18 +234,13 @@ public class ExampleSpecializedFunctionProxy : AbstractSpecializedFunctionProxyB
 
 
 ### Submodules
-Keep attention to get and update all the embedded submodules. Sometimes it seems to be necessary to update the submodules resources – do not submit this to the main branch of submodule
-
-**TIP:** When doing submodule updates use the option **recursive** to get all submodules of the submodules!!! (`git submodule update --init --recursive`)
-
-**TIP:** For checking out the repository, do also use the **recursice** option (`git clone --recursive git://github.com/mysociety/whatdotheyknow.git`)
 
 - [DotNet_AudioRenderer](https://github.com/TUD-INF-IAI-MCI/DotNet_AudioRenderer) - audio renderer for speech output
 - [DotNet_Extensibility](https://github.com/TUD-INF-IAI-MCI/DotNet_Extensibility) - extension framework for easy extensibility
 - [DotNet_LanguageLocalization](https://github.com/TUD-INF-IAI-MCI/DotNet_LanguageLocalization) - localizing framework for different languages
 - [DotNet_Logger](https://github.com/TUD-INF-IAI-MCI/DotNet_Logger) - logger to store logging information with timestamp
 - [Tangram_Interfaces](https://github.com/TUD-INF-IAI-MCI/Tangram_Interfaces) - interfaces of the tangram framework for inter-project-compatibility
-       - [BrailleIO](https://github.com/TUD-INF-IAI-MCI/BrailleIO) - tactile display abstraction framework
+- [BrailleIO](https://github.com/TUD-INF-IAI-MCI/BrailleIO) - tactile display abstraction framework
 
 
 ## You want to know more?
