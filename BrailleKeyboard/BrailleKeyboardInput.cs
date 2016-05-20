@@ -14,7 +14,16 @@ namespace tud.mci.tangram.TangramLector.Control
         readonly AudioRenderer audioRenderer = AudioRenderer.Instance;
 
         String _input = "";
-        readonly Object _inputLock = new Object();       
+        readonly Object _inputLock = new Object();
+
+
+        /// <summary>
+        /// Gets or sets the auditory feedback mode for text inputs.
+        /// </summary>
+        /// <value>
+        /// The feedback mode.
+        /// </value>
+        public EchoMode TextFeedbackMode { get; set; }
 
         /// <summary>
         /// The interpreted input string.
@@ -73,6 +82,8 @@ namespace tud.mci.tangram.TangramLector.Control
 
         public BrailleKeyboardInput(System.Globalization.CultureInfo culture = null)
         {
+            TextFeedbackMode =  EchoMode.CharEcho | EchoMode.WordEcho;
+
             if (proxy != null)
             {
                 proxy.BrailleKeyboardKey += new EventHandler<BrailleKeyboardEventArgs>(proxy_BrailleKeybordKey);
@@ -83,7 +94,6 @@ namespace tud.mci.tangram.TangramLector.Control
             {
                 LL.SetStandardCulture(culture);
             }
-
         }
 
         #endregion
@@ -114,7 +124,7 @@ namespace tud.mci.tangram.TangramLector.Control
         }
 
         /// <summary>
-        /// Moves the the caret to the given index.
+        /// Moves the caret to the given index.
         /// </summary>
         /// <param name="index">The new index.</param>
         /// <returns>the new caret position</returns>
@@ -130,7 +140,7 @@ namespace tud.mci.tangram.TangramLector.Control
         /// <summary>
         /// Clears the input and the caret.
         /// </summary>
-        /// <returns><code>true</code> if the reset was succesfull</returns>
+        /// <returns><code>true</code> if the reset was successful</returns>
         public bool ClearInput()
         {
             Input = String.Empty;
@@ -405,12 +415,18 @@ namespace tud.mci.tangram.TangramLector.Control
         {
             InsertStringToInput(c, Caret);
             Caret += c.Length;
+            string orgC = c;
 
             if (c.Equals("\r\n")) c = "return";
             else if (c.Equals("\t")) c = "tab";
+
+            // play only if Char-Echo is set
+            if (TextFeedbackMode.HasFlag(EchoMode.CharEcho))
             audioRenderer.PlaySoundImmediately(c);
 
-            if (String.IsNullOrWhiteSpace(c)) //FIXME: make this also for the other separators
+            // play only if Word-Echo is set
+            if ( TextFeedbackMode.HasFlag(EchoMode.WordEcho) 
+                && (String.IsNullOrWhiteSpace(c) || stringSeparators.Contains(orgC)))
             {
                 string[] words = Input.Split(stringSeparators, StringSplitOptions.RemoveEmptyEntries);
 
@@ -656,6 +672,23 @@ namespace tud.mci.tangram.TangramLector.Control
         Down,
         Pos1,
         Ende
+    }
+
+    [Flags]
+    public enum EchoMode
+    {
+        /// <summary>
+        /// No audio output for inputs
+        /// </summary>
+        None = 0,
+        /// <summary>
+        /// The last entered character will be echoed by auditory channel.
+        /// </summary>
+        CharEcho,
+        /// <summary>
+        /// The last written word (after an separator char) will be echoed by auditory channel.
+        /// </summary>
+        WordEcho,
     }
 
     #endregion
