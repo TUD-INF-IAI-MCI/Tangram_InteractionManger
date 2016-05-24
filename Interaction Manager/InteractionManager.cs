@@ -351,7 +351,7 @@ namespace tud.mci.tangram.TangramLector
                 catch (Exception ex)
                 {
                     AudioRenderer.Instance.PlaySound(LL.GetTrans("tangram.interaction_manager.error.gesture_recognizer"));
-                    Logger.Instance.Log(LogPriority.DEBUG, this, "gesture recognizer initialization error");
+                    Logger.Instance.Log(LogPriority.DEBUG, this, "gesture recognizer initialization error", ex);
                 }
             }
         }

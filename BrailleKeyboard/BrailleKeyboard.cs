@@ -15,7 +15,7 @@ namespace tud.mci.tangram.TangramLector.Control
         {
             try
             {
-                // load the basic unicode braille chars
+                // load the basic Unicode braille chars
                 string baseDir = GetCurrentDllDirectory();
                 bool baseSuccess = fl.LoadFile(baseDir + @"\config\tables\unicode.dis");
 
@@ -30,7 +30,7 @@ namespace tud.mci.tangram.TangramLector.Control
             }
             catch (ArgumentException ex)
             {
-                Logger.Instance.Log(LogPriority.MIDDLE, this, "[FATAL ERROR] Can't load braille table");
+                Logger.Instance.Log(LogPriority.MIDDLE, this, "[FATAL ERROR] Can't load braille table", ex);
             }
         }
 
@@ -62,7 +62,7 @@ namespace tud.mci.tangram.TangramLector.Control
         /// Gets the Braille dots for char.
         /// </summary>
         /// <param name="c">The char to translate e.g. 'g'.</param>
-        /// <returns>the dot pattren as a sorted string of raised dot-positions e.g. '1245'</returns>
+        /// <returns>the dot pattern as a sorted string of raised dot-positions e.g. '1245'</returns>
         public String GetDotsForChar(char c)
         {
             return GetDotsForChar(c.ToString());
@@ -71,7 +71,7 @@ namespace tud.mci.tangram.TangramLector.Control
         /// <summary>
         /// Gets the corresponding char for a defined eight dot pattern.
         /// </summary>
-        /// <param name="dots">The eight dotpattern as a sorted string e.g. '12345678'.</param>
+        /// <param name="dots">The eight dot pattern as a sorted string e.g. '12345678'.</param>
         /// <returns>the corresponding char from the loaded table</returns>
         public String GetCharFromDots(string dots)
         {
@@ -112,7 +112,7 @@ namespace tud.mci.tangram.TangramLector.Control
         /// Double mappings of dot pattern will be overwritten by the last loaded definition.
         /// </summary>
         /// <param name="path">The path to the translation table file to load.</param>
-        /// <returns><c>true</c> if the file could be loaded and translated into mapping dictonaries.</returns>
+        /// <returns><c>true</c> if the file could be loaded and translated into mapping dictionaries.</returns>
         public bool LoadFile(String path)
         {
             if (File.Exists(path))
@@ -170,7 +170,7 @@ namespace tud.mci.tangram.TangramLector.Control
                     {
                         if (parts.Length > 2)
                         {
-                            if (parts[1].StartsWith(@"\") && parts[1].Length > 2) // get unicode Hex definitions but leave the backslash as a char
+                            if (parts[1].StartsWith(@"\") && parts[1].Length > 2) // get Unicode Hex definitions but leave the backslash as a char
                             {
                                 parts[1] = GetCharFromUnicodeHex(parts[1]);
                             }
@@ -191,10 +191,10 @@ namespace tud.mci.tangram.TangramLector.Control
         }
 
         /// <summary>
-        /// Gets the char from unicode hexadecimal string.
+        /// Gets the char from Unicode hexadecimal string.
         /// </summary>
         /// <param name="characterCode">The character code e.g. '\x2800'.</param>
-        /// <returns>the current available unicode character if available e.g. ' '</returns>
+        /// <returns>the current available Unicode character if available e.g. ' '</returns>
         public static string GetCharFromUnicodeHex(String characterCode)
         {
             if (!String.IsNullOrEmpty(characterCode))
@@ -220,7 +220,7 @@ namespace tud.mci.tangram.TangramLector.Control
         }
 
         /// <summary>
-        /// try to parse a char from unicode int.
+        /// try to parse a char from Unicode int.
         /// </summary>
         /// <param name="number">The number code e.g. 10241.</param>
         /// <returns>the char of the given value e.g. ' '</returns>
