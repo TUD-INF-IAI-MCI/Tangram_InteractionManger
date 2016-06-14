@@ -68,30 +68,5 @@ namespace tud.mci.tangram.TangramLector
             if ((keys & BrailleIO_DeviceButtonStates.Unknown) == BrailleIO_DeviceButtonStates.Unknown) k.Add(BrailleIO_DeviceButton.Unknown);
             return k;
         }
-
-        //virtual public List<BrailleIO_DeviceButton> GetAllPressedGeneralButtons(EventArgs args)
-        //{
-        //    return new List<BrailleIO_DeviceButton>();
-        //}
-
-        //virtual public List<BrailleIO_DeviceButton> GetAllReleasedGeneralButtons(EventArgs args)
-        //{
-        //    return new List<BrailleIO_DeviceButton>();
-        //}
-
-        //virtual public List<string> GetAllPressedGenericButtons(EventArgs args)
-        //{
-        //    return new List<string>();
-        //}
-
-        //virtual public List<string> GetAllReleasedGenericButtons(EventArgs args)
-        //{
-        //    return new List<string>();
-        //}
-
-        //virtual public object GetGesture(EventArgs args)
-        //{
-        //    return null;
-        //}
     }
 }
