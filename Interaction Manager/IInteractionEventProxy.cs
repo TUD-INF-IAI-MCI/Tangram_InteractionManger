@@ -1,6 +1,7 @@
-﻿using System;
+﻿using BrailleIO.Interface;
+using Gestures.Recognition.Interfaces;
+using System;
 using System.Collections.Generic;
-using BrailleIO.Interface;
 
 namespace tud.mci.tangram.TangramLector
 {
@@ -63,7 +64,7 @@ namespace tud.mci.tangram.TangramLector
         /// <summary>
         /// Initializes a new instance of the <see cref="BrailleIOInteractionEventArgs"/> class.
         /// </summary>
-        /// <param name="timestamp">The timestamp the interaction occured.</param>
+        /// <param name="timestamp">The timestamp the interaction occurred.</param>
         /// <param name="device">The device.</param>
         /// <param name="pressedGeneralKeys">The pressed general keys.</param>
         /// <param name="pressedGenericKeys">The interpreted pressed generic keys.</param>
@@ -120,7 +121,7 @@ namespace tud.mci.tangram.TangramLector
         /// <summary>
         /// gesture classification result
         /// </summary>
-        public readonly Gestures.Recognition.Interfaces.IClassificationResult Gesture;
+        public IClassificationResult Gesture;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="GestureEventArgs"/> class.
@@ -133,7 +134,7 @@ namespace tud.mci.tangram.TangramLector
         /// <param name="gesture">The gesture classification result.</param>
         public GestureEventArgs(BrailleIO.BrailleIODevice device, List<BrailleIO_DeviceButton> pressedGeneralKeys, List<String> pressedGenericKeys,
             List<BrailleIO_DeviceButton> releasedGeneralKeys, List<String> releasedGenericKeys,
-            Gestures.Recognition.Interfaces.IClassificationResult gesture)
+            IClassificationResult gesture)
             : base(device, pressedGeneralKeys, pressedGenericKeys, releasedGeneralKeys, releasedGenericKeys)
         { this.Gesture = gesture; }
         //TODO: implement this

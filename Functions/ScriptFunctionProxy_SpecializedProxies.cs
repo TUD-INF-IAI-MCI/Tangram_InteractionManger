@@ -126,7 +126,7 @@ namespace tud.mci.tangram.TangramLector
 
     /// <summary>
     /// Class to forward interactionManager events to e.g. specialized function proxies.
-    /// This forwarder controlls if an event queue should be canceled.
+    /// This forwarder controls if an event queue should be canceled.
     /// </summary>
     class BasicInteractionEventForwarder : IInteractionEventProxy
     {
@@ -257,7 +257,7 @@ namespace tud.mci.tangram.TangramLector
                             break;
                         }
                     }
-                    catch (Exception) { }
+                    catch (Exception ex) { }
                 }
             }
             return cancel;

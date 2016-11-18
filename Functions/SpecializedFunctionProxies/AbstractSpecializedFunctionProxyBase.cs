@@ -124,7 +124,7 @@ namespace tud.mci.tangram.TangramLector.SpecializedFunctionProxies
         /// <param name="e">The <see cref="GestureEventArgs"/> instance containing the event data.</param>
         protected virtual void im_GesturePerformed(object sender, GestureEventArgs e)
         {
-            if (Active) { base.fireGestureEvent(e); }
+            if (Active && e.Gesture != null) { base.fireGestureEvent(e); }
         }
 
         /// <summary>
