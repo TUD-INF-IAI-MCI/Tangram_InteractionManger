@@ -183,7 +183,7 @@ namespace tud.mci.tangram.TangramLector.SpecializedFunctionProxies
                 catch { }
             }
         }
-
+        
         #endregion
 
     }
