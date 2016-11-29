@@ -7,6 +7,9 @@ namespace tud.mci.tangram.TangramLector
     /// </summary>
     public abstract class AbstractInteractionEventProxy : IInteractionEventProxy
     {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AbstractInteractionEventProxy"/> class.
+        /// </summary>
         public AbstractInteractionEventProxy(){}
 
         /// <summary>
@@ -26,6 +29,11 @@ namespace tud.mci.tangram.TangramLector
         /// </summary>
         public event EventHandler<GestureEventArgs> GesturePerformed;
 
+        /// <summary>
+        /// Fires the button released event.
+        /// </summary>
+        /// <param name="args">The <see cref="ButtonReleasedEventArgs"/> instance containing the event data.</param>
+        /// <returns>cancel event throwing or not</returns>
         protected virtual bool fireButtonReleasedEvent(ButtonReleasedEventArgs args)
         {
             bool cancel = false;
@@ -48,6 +56,11 @@ namespace tud.mci.tangram.TangramLector
             return cancel;
 
         }
+        /// <summary>
+        /// Fires the button combination released event.
+        /// </summary>
+        /// <param name="args">The <see cref="ButtonReleasedEventArgs"/> instance containing the event data.</param>
+        /// <returns>cancel event throwing or not</returns>
         protected virtual bool fireButtonCombinationReleasedEvent(ButtonReleasedEventArgs args)
         {
             bool cancel = false;
@@ -69,6 +82,11 @@ namespace tud.mci.tangram.TangramLector
             }
             return cancel;
         }
+        /// <summary>
+        /// Fires the button pressed event.
+        /// </summary>
+        /// <param name="args">The <see cref="ButtonPressedEventArgs"/> instance containing the event data.</param>
+        /// <returns>cancel event throwing or not</returns>
         protected virtual bool fireButtonPressedEvent(ButtonPressedEventArgs args)
         {
             bool cancel = false;
@@ -90,6 +108,11 @@ namespace tud.mci.tangram.TangramLector
             }
             return cancel;
         }
+        /// <summary>
+        /// Fires the gesture event.
+        /// </summary>
+        /// <param name="args">The <see cref="GestureEventArgs"/> instance containing the event data.</param>
+        /// <returns>cancel event throwing or not</returns>
         protected virtual bool fireGestureEvent(GestureEventArgs args)
         {
             bool cancel = false;
@@ -111,6 +134,5 @@ namespace tud.mci.tangram.TangramLector
             }
             return cancel;
         }
-
     }
 }

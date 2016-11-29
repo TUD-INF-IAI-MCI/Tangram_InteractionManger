@@ -18,6 +18,13 @@ namespace tud.mci.tangram.TangramLector
         private static ConcurrentDictionary<String, Type> _mcList = new ConcurrentDictionary<String, Type>();
         readonly static object _mcListLock = new object();
 
+        /// <summary>
+        /// Gets or sets the mediator class list.
+        /// Dictionary combining the adapter.GetType().ToString() with his related Button mediator.
+        /// </summary>
+        /// <value>
+        /// The mediator class list.
+        /// </value>
         public static ConcurrentDictionary<String, Type> MediatorClassList
         {
             get
@@ -38,6 +45,13 @@ namespace tud.mci.tangram.TangramLector
         static ConcurrentDictionary<String, IBrailleIOButtonMediator> _mList = new ConcurrentDictionary<String, IBrailleIOButtonMediator>();
         readonly static object _mListLock = new object();
 
+        /// <summary>
+        /// Gets or sets the mediator list.
+        /// A dictionary combining a device name with the related mediator. 
+        /// </summary>
+        /// <value>
+        /// The mediator list.
+        /// </value>
         public static ConcurrentDictionary<String, IBrailleIOButtonMediator> MediatorList
         {
             get

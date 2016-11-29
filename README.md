@@ -160,6 +160,12 @@ InteractionManager.Instance.BKI.Reset();
 
 ## How to use:
 
+The basic sequence of handling user interactions is displayed in the following diagram:
+
+![Sequence of handling user interactions (buttons/gesture) by the interaction manager and the connected proxies](/doc_imgs/UML-InteractionManager.png)
+
+
+
 ### Basic Set-Up
 
 Set up basic global variables for the `InteractionManager` 

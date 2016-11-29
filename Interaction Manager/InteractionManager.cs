@@ -39,29 +39,29 @@ namespace tud.mci.tangram.TangramLector
 
         #region public
 
-        private BrailleKeyboardInput bki = new BrailleKeyboardInput();
+        private BrailleKeyboardInput _bki = new BrailleKeyboardInput();
         /// <summary>
         /// Gets the current active Braille keyboard input (an interpreted complete entered text input by a Braille keyboard).
         /// </summary>
         /// <value>The input by a Braille keyboard.</value>
         public BrailleKeyboardInput BKI
         {
-            get { return bki; }
+            get { return _bki; }
         }
 
-        InteractionMode mode = InteractionMode.Normal;
+        InteractionMode _mode = InteractionMode.Normal;
         /// <summary>
         /// Gets or sets the mode giving a hint about the current activity state.
         /// </summary>
         /// <value>The new interaction mode.</value>
         public InteractionMode Mode
         {
-            get { return mode; }
+            get { return _mode; }
             private set
             {
-                var old = mode;
-                mode = value;
-                fireInteractionModeChangedEvent(old, mode);
+                var old = _mode;
+                _mode = value;
+                fireInteractionModeChangedEvent(old, _mode);
             }
         }
         #endregion
@@ -99,9 +99,17 @@ namespace tud.mci.tangram.TangramLector
             catch { }
         }
 
+        /// <summary>
+        /// Dispose this instance;
+        /// </summary>
         public void Dispose()
         {
-            this.inputQueueThread.Abort();
+            try
+            {
+                _run = false;
+                this.inputQueueThread.Abort();
+            }
+            catch { }
         }
 
         #endregion
@@ -217,10 +225,10 @@ namespace tud.mci.tangram.TangramLector
             {
                 case InteractionQueueObjectType.Unknown:
                     break;
-                case InteractionQueueObjectType.KeyPressed:
+                case InteractionQueueObjectType.ButtonPressed:
                     handleKeyPressedEvent(interactionQueueItem.Sender, interactionQueueItem.Device, interactionQueueItem.Args as BrailleIO_KeyPressed_EventArgs);
                     break;
-                case InteractionQueueObjectType.KeyStateChange:
+                case InteractionQueueObjectType.ButtonStateChange:
                     handleKeyStateChangedEvent(interactionQueueItem.Sender, interactionQueueItem.Device, interactionQueueItem.Args as BrailleIO_KeyStateChanged_EventArgs);
                     break;
                 case InteractionQueueObjectType.Touch:
@@ -239,10 +247,34 @@ namespace tud.mci.tangram.TangramLector
 
         #region Enqueue
 
-        protected void enqueueInteractionQueuItem(DateTime timestamp, EventArgs e, object sender) { enqueueInteractionQueuItem(timestamp, InteractionQueueObjectType.Unknown, e, sender); }
-        protected void enqueueInteractionQueuItem(EventArgs e, object sender) { enqueueInteractionQueuItem(InteractionQueueObjectType.Unknown, e, sender); }
-        protected void enqueueInteractionQueuItem(InteractionQueueObjectType type, EventArgs e, object sender) { enqueueInteractionQueuItem(DateTime.Now, type, e, sender); }
-        protected void enqueueInteractionQueuItem(DateTime timestamp, InteractionQueueObjectType type, EventArgs e, object sender)
+        /// <summary>
+        /// Enqueues an interaction queue item.
+        /// </summary>
+        /// <param name="timestamp">The timestamp.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        /// <param name="sender">The sender.</param>
+        protected void enqueueInteractionQueueItem(DateTime timestamp, EventArgs e, object sender) { enqueueInteractionQueueItem(timestamp, InteractionQueueObjectType.Unknown, e, sender); }
+        /// <summary>
+        /// Enqueues an interaction queue item.
+        /// </summary>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        /// <param name="sender">The sender.</param>
+        protected void enqueueInteractionQueueItem(EventArgs e, object sender) { enqueueInteractionQueueItem(InteractionQueueObjectType.Unknown, e, sender); }
+        /// <summary>
+        /// Enqueues an interaction queue item.
+        /// </summary>
+        /// <param name="type">The type.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        /// <param name="sender">The sender.</param>
+        protected void enqueueInteractionQueueItem(InteractionQueueObjectType type, EventArgs e, object sender) { enqueueInteractionQueueItem(DateTime.Now, type, e, sender); }
+        /// <summary>
+        /// Enqueues an interaction queue item.
+        /// </summary>
+        /// <param name="timestamp">The timestamp.</param>
+        /// <param name="type">The type.</param>
+        /// <param name="e">The <see cref="EventArgs"/> instance containing the event data.</param>
+        /// <param name="sender">The sender.</param>
+        protected void enqueueInteractionQueueItem(DateTime timestamp, InteractionQueueObjectType type, EventArgs e, object sender)
         {
             if (e != null)
             {
@@ -358,23 +390,23 @@ namespace tud.mci.tangram.TangramLector
 
         void adapter_touchValuesChanged(object sender, BrailleIO.Interface.BrailleIO_TouchValuesChanged_EventArgs e)
         {
-            enqueueInteractionQueuItem(TimeStampUtils.UnixTimeStampToDateTime((double)e.timestamp), InteractionQueueObjectType.Touch, e, sender);
+            enqueueInteractionQueueItem(TimeStampUtils.UnixTimeStampToDateTime((double)e.timestamp), InteractionQueueObjectType.Touch, e, sender);
         }
         void adapter_keyStateChanged(object sender, BrailleIO.Interface.BrailleIO_KeyStateChanged_EventArgs e)
         {
-            enqueueInteractionQueuItem(InteractionQueueObjectType.KeyStateChange, e, sender);
+            enqueueInteractionQueueItem(InteractionQueueObjectType.ButtonStateChange, e, sender);
         }
         void adapter_keyPressed(object sender, BrailleIO.Interface.BrailleIO_KeyPressed_EventArgs e)
         {
-            enqueueInteractionQueuItem(InteractionQueueObjectType.KeyPressed, e, sender);
+            enqueueInteractionQueueItem(InteractionQueueObjectType.ButtonPressed, e, sender);
         }
         void adapter_inputChanged(object sender, BrailleIO.Interface.BrailleIO_InputChanged_EventArgs e)
         {
-            enqueueInteractionQueuItem(TimeStampUtils.UnixTimeStampToDateTime((double)e.timestamp), InteractionQueueObjectType.InputChanged, e, sender);
+            enqueueInteractionQueueItem(TimeStampUtils.UnixTimeStampToDateTime((double)e.timestamp), InteractionQueueObjectType.InputChanged, e, sender);
         }
         void adapter_errorOccured(object sender, BrailleIO.Interface.BrailleIO_ErrorOccured_EventArgs e)
         {
-            enqueueInteractionQueuItem(InteractionQueueObjectType.Error, e, sender);
+            enqueueInteractionQueueItem(InteractionQueueObjectType.Error, e, sender);
         }
         void InteractionManager_ButtonReleased(object sender, ButtonReleasedEventArgs e)
         {
@@ -388,6 +420,15 @@ namespace tud.mci.tangram.TangramLector
 
         #region fire events
 
+        /// <summary>
+        /// Fires the button released event.
+        /// </summary>
+        /// <param name="device">The device.</param>
+        /// <param name="pressedGeneralKeys">The pressed general keys.</param>
+        /// <param name="pressedGenericKeys">The pressed generic keys.</param>
+        /// <param name="releasedGeneralKeys">The released general keys.</param>
+        /// <param name="releasedGenericKeys">The released generic keys.</param>
+        /// <returns></returns>
         protected bool fireButtonReleasedEvent(BrailleIO.BrailleIODevice device, List<BrailleIO_DeviceButton> pressedGeneralKeys, List<String> pressedGenericKeys, List<BrailleIO_DeviceButton> releasedGeneralKeys, List<String> releasedGenericKeys)
         {
             var args = new ButtonReleasedEventArgs(device, pressedGeneralKeys, pressedGenericKeys, releasedGeneralKeys, releasedGenericKeys);
@@ -396,6 +437,16 @@ namespace tud.mci.tangram.TangramLector
             if (cancel) { System.Diagnostics.Debug.WriteLine("InteractionManager Event canceled"); }
             return cancel;
         }
+       
+        /// <summary>
+        /// Fires the button combination released event.
+        /// </summary>
+        /// <param name="device">The device.</param>
+        /// <param name="pressedGeneralKeys">The pressed general keys.</param>
+        /// <param name="pressedGenericKeys">The pressed generic keys.</param>
+        /// <param name="releasedGeneralKeys">The released general keys.</param>
+        /// <param name="releasedGenericKeys">The released generic keys.</param>
+        /// <returns></returns>
         protected bool fireButtonCombinationReleasedEvent(BrailleIO.BrailleIODevice device, List<BrailleIO_DeviceButton> pressedGeneralKeys, List<String> pressedGenericKeys, List<BrailleIO_DeviceButton> releasedGeneralKeys, List<String> releasedGenericKeys)
         {
             var args = new ButtonReleasedEventArgs(device, pressedGeneralKeys, pressedGenericKeys, releasedGeneralKeys, releasedGenericKeys);
@@ -405,6 +456,13 @@ namespace tud.mci.tangram.TangramLector
             return cancel;
         }
 
+        /// <summary>
+        /// Fires the button pressed event.
+        /// </summary>
+        /// <param name="device">The device.</param>
+        /// <param name="pressedGeneralKeys">The pressed general keys.</param>
+        /// <param name="pressedGenericKeys">The pressed generic keys.</param>
+        /// <returns></returns>
         protected bool fireButtonPressedEvent(BrailleIO.BrailleIODevice device, List<BrailleIO_DeviceButton> pressedGeneralKeys, List<String> pressedGenericKeys)
         {
             var args = new ButtonPressedEventArgs(device, pressedGeneralKeys, pressedGenericKeys);
@@ -414,6 +472,16 @@ namespace tud.mci.tangram.TangramLector
             return cancel;
         }
 
+        /// <summary>
+        /// Fires the gesture event.
+        /// </summary>
+        /// <param name="device">The device.</param>
+        /// <param name="releasedGeneralKeys">The released general keys.</param>
+        /// <param name="releasedGenericKeys">The released generic keys.</param>
+        /// <param name="pressedGeneralKeys">The pressed general keys.</param>
+        /// <param name="pressedGenericKeys">The pressed generic keys.</param>
+        /// <param name="gesture">The gesture.</param>
+        /// <returns></returns>
         protected bool fireGestureEvent(BrailleIO.BrailleIODevice device, List<BrailleIO_DeviceButton> releasedGeneralKeys, List<String> releasedGenericKeys, List<BrailleIO_DeviceButton> pressedGeneralKeys, List<String> pressedGenericKeys, Gestures.Recognition.Interfaces.IClassificationResult gesture)
         {
             var args = new GestureEventArgs(device, pressedGeneralKeys, pressedGenericKeys, releasedGeneralKeys, releasedGenericKeys, gesture);
@@ -428,6 +496,11 @@ namespace tud.mci.tangram.TangramLector
         /// </summary>
         public event EventHandler<InteractionModeChangedEventArgs> InteractionModeChanged;
 
+        /// <summary>
+        /// Fires the interaction mode changed event.
+        /// </summary>
+        /// <param name="oldValue">The old value.</param>
+        /// <param name="newValue">The new value.</param>
         protected void fireInteractionModeChangedEvent(InteractionMode oldValue, InteractionMode newValue)
         {
             if (InteractionModeChanged != null)
@@ -444,7 +517,7 @@ namespace tud.mci.tangram.TangramLector
 
         #endregion
 
-        #region Keycombination Interpreter
+        #region Key Combination Interpreter
 
         Dictionary<BrailleIODevice, System.Timers.Timer> _keyCombinationTimerList = new Dictionary<BrailleIODevice, System.Timers.Timer>();
         Dictionary<System.Timers.Timer, KeyCombinationItem> _keyCombinationTimerButtonList = new Dictionary<System.Timers.Timer, KeyCombinationItem>();
@@ -584,6 +657,7 @@ namespace tud.mci.tangram.TangramLector
                 }
             }
         }
+        
         #endregion
 
         #region Gesture Interpreter
@@ -739,13 +813,13 @@ namespace tud.mci.tangram.TangramLector
 
                 if (brailleIO_TouchValuesChanged_EventArgs != null && blobTracker != null)
                 {
-                    Frame f = GetFrameFromSampleSet(brailleIO_TouchValuesChanged_EventArgs.touches);
+                    Frame f = getFrameFromSampleSet(brailleIO_TouchValuesChanged_EventArgs.touches);
                     blobTracker.AddFrame(f);
                 }
             }
         }
 
-        private Frame GetFrameFromSampleSet(double[,] sampleSet)
+        private Frame getFrameFromSampleSet(double[,] sampleSet)
         {
             List<Touch> touchList = new List<Touch>();
             if (sampleSet != null)
@@ -835,11 +909,11 @@ namespace tud.mci.tangram.TangramLector
         /// <summary>
         /// key was pressed
         /// </summary>
-        KeyPressed,
+        ButtonPressed,
         /// <summary>
         /// status of key has changed
         /// </summary>
-        KeyStateChange,
+        ButtonStateChange,
         /// <summary>
         /// touch values changed
         /// </summary>

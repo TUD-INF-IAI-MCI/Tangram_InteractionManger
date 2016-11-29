@@ -11,16 +11,42 @@ namespace tud.mci.tangram.TangramLector
     public abstract class AbstractBrailleIOButtonMediatorBase 
     {
         #region Members
+        /// <summary>
+        /// The device
+        /// </summary>
         protected BrailleIODevice device;
+        /// <summary>
+        /// List of last generic keys pressed
+        /// </summary>
         protected List<String> lastGenericPressedkeys = new List<String>();
+        /// <summary>
+        /// List of last generic keys released
+        /// </summary>
         protected List<String> releasedGenericPressedkeys = new List<String>();
+        /// <summary>
+        // List of last general keys pressed
+        /// </summary>
         protected List<BrailleIO_DeviceButton> lastGeneralPressedkeys = new List<BrailleIO_DeviceButton>();
+        /// <summary>
+        /// List of last general keys released
+        /// </summary>
         protected List<BrailleIO_DeviceButton> releasedGeneralPressedkeys = new List<BrailleIO_DeviceButton>();
 
         #endregion
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AbstractBrailleIOButtonMediatorBase"/> class.
+        /// </summary>
         public AbstractBrailleIOButtonMediatorBase() { }
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AbstractBrailleIOButtonMediatorBase"/> class.
+        /// </summary>
+        /// <param name="device">The related device to this mediator.</param>
         public AbstractBrailleIOButtonMediatorBase(BrailleIODevice device) { this.device = device; }
+        /// <summary>
+        /// Sets the related device to this mediator.
+        /// </summary>
+        /// <param name="device">The device.</param>
         public void setDevice(BrailleIODevice device) { this.device = device; }
 
         /// <summary>

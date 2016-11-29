@@ -137,11 +137,6 @@ namespace tud.mci.tangram.TangramLector
             IClassificationResult gesture)
             : base(device, pressedGeneralKeys, pressedGenericKeys, releasedGeneralKeys, releasedGenericKeys)
         { this.Gesture = gesture; }
-        //TODO: implement this
-        // Gesture
-        // Touch values
-        // Start time
-        // End time
     }
     #endregion
 
