@@ -238,6 +238,8 @@ public class ExampleSpecializedFunctionProxy : AbstractSpecializedFunctionProxyB
 }
 ```
 
+![Sequence of handling user interactions events (buttons/gesture) in a cascading way by the connected proxies - esspecially the calling order defined by date/time of registration, zIndex and/or canceling the evnts](/doc_imgs/UML-InteractionManager-EventCascade.png)
+
 
 ### Submodules
 
