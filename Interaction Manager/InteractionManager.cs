@@ -447,7 +447,7 @@ namespace tud.mci.tangram.TangramLector
             if (cancel) { System.Diagnostics.Debug.WriteLine("InteractionManager Event canceled"); }
             return cancel;
         }
-       
+
         /// <summary>
         /// Fires the button combination released event.
         /// </summary>
@@ -667,7 +667,7 @@ namespace tud.mci.tangram.TangramLector
                 }
             }
         }
-        
+
         #endregion
 
         #region Gesture Interpreter
@@ -736,8 +736,8 @@ namespace tud.mci.tangram.TangramLector
 
         private void startGesture(List<BrailleIO_DeviceButton> pressedKeys, List<String> pressedGenKeys, BrailleIODevice device)
         {
-            if (pressedKeys != null && pressedGenKeys.Count < 2 
-                &&  (pressedGenKeys.Contains("hbr") || pressedKeys.Contains(BrailleIO_DeviceButton.Gesture)))
+            if (pressedKeys != null && pressedGenKeys.Count < 2
+                && (pressedGenKeys.Contains("hbr") || pressedKeys.Contains(BrailleIO_DeviceButton.Gesture)))
             {
                 //start gesture recording
                 BlobTracker blobTracker;
@@ -766,7 +766,7 @@ namespace tud.mci.tangram.TangramLector
                 else
                 {
                     initalizeGestureRecognition(device);
-                } 
+                }
             }
         }
 
@@ -795,7 +795,8 @@ namespace tud.mci.tangram.TangramLector
             }
             else { return; }
 
-            if (gesturingDevices.Contains(device)) {
+            if (gesturingDevices.Contains(device))
+            {
                 BrailleIODevice trash = device;
                 int i = 0;
                 while (!gesturingDevices.TryTake(out trash) && i++ < 10) { Thread.Sleep(5); }
@@ -830,9 +831,10 @@ namespace tud.mci.tangram.TangramLector
 
         private void handleTouchEvent(Object sender, BrailleIODevice brailleIODevice, BrailleIO_TouchValuesChanged_EventArgs brailleIO_TouchValuesChanged_EventArgs)
         {
-            if ((Mode & InteractionMode.Gesture) == InteractionMode.Gesture
-                 || (Mode & InteractionMode.Manipulation) == InteractionMode.Manipulation
-                )
+
+            if (gesturingDevices.Contains(brailleIODevice) 
+                && ((Mode & InteractionMode.Gesture) == InteractionMode.Gesture
+                || (Mode & InteractionMode.Manipulation) == InteractionMode.Manipulation))
             {
                 BlobTracker blobTracker;
                 blobTrackers.TryGetValue(brailleIODevice, out blobTracker);
