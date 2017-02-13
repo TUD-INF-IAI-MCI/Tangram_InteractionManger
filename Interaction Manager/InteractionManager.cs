@@ -29,11 +29,11 @@ namespace tud.mci.tangram.TangramLector
 
         bool _run;
         Thread inputQueueThread;
-        Dictionary<String, IBrailleIOAdapter> devices = new Dictionary<String, IBrailleIOAdapter>();
-        Queue<InteractionQueueItem> inputQueue = new Queue<InteractionQueueItem>();
+        readonly Dictionary<String, IBrailleIOAdapter> devices = new Dictionary<String, IBrailleIOAdapter>();
+        readonly ConcurrentQueue<InteractionQueueItem> inputQueue = new ConcurrentQueue<InteractionQueueItem>();
 
-        ConcurrentDictionary<BrailleIODevice, BlobTracker> blobTrackers = new ConcurrentDictionary<BrailleIODevice, BlobTracker>();
-        ConcurrentDictionary<BrailleIODevice, GestureRecognizer> gestureRecognizers = new ConcurrentDictionary<BrailleIODevice, GestureRecognizer>();
+        readonly ConcurrentDictionary<BrailleIODevice, BlobTracker> blobTrackers = new ConcurrentDictionary<BrailleIODevice, BlobTracker>();
+        readonly ConcurrentDictionary<BrailleIODevice, GestureRecognizer> gestureRecognizers = new ConcurrentDictionary<BrailleIODevice, GestureRecognizer>();
 
         #endregion
 
@@ -204,7 +204,10 @@ namespace tud.mci.tangram.TangramLector
                 {
                     try
                     {
-                        handleInputQueueItem(inputQueue.Dequeue());
+                        InteractionQueueItem result;
+                        int i = 0;
+                        while (!inputQueue.TryDequeue(out result) && i++ < 5) { Thread.Sleep(5); }
+                        handleInputQueueItem(result);
                     }
                     catch { }
                 }
@@ -221,25 +224,33 @@ namespace tud.mci.tangram.TangramLector
 
         private void handleInputQueueItem(InteractionQueueItem interactionQueueItem)
         {
-            switch (interactionQueueItem.Type)
+            try
             {
-                case InteractionQueueObjectType.Unknown:
-                    break;
-                case InteractionQueueObjectType.ButtonPressed:
-                    handleKeyPressedEvent(interactionQueueItem.Sender, interactionQueueItem.Device, interactionQueueItem.Args as BrailleIO_KeyPressed_EventArgs);
-                    break;
-                case InteractionQueueObjectType.ButtonStateChange:
-                    handleKeyStateChangedEvent(interactionQueueItem.Sender, interactionQueueItem.Device, interactionQueueItem.Args as BrailleIO_KeyStateChanged_EventArgs);
-                    break;
-                case InteractionQueueObjectType.Touch:
-                    handleTouchEvent(interactionQueueItem.Sender, interactionQueueItem.Device, interactionQueueItem.Args as BrailleIO_TouchValuesChanged_EventArgs);
-                    break;
-                case InteractionQueueObjectType.InputChanged:
-                    break;
-                case InteractionQueueObjectType.Error:
-                    break;
-                default:
-                    break;
+                switch (interactionQueueItem.Type)
+                {
+                    case InteractionQueueObjectType.Unknown:
+                        break;
+                    case InteractionQueueObjectType.ButtonPressed:
+                        handleKeyPressedEvent(interactionQueueItem.Sender, interactionQueueItem.Device, interactionQueueItem.Args as BrailleIO_KeyPressed_EventArgs);
+                        break;
+                    case InteractionQueueObjectType.ButtonStateChange:
+                        handleKeyStateChangedEvent(interactionQueueItem.Sender, interactionQueueItem.Device, interactionQueueItem.Args as BrailleIO_KeyStateChanged_EventArgs);
+                        break;
+                    case InteractionQueueObjectType.Touch:
+                        handleTouchEvent(interactionQueueItem.Sender, interactionQueueItem.Device, interactionQueueItem.Args as BrailleIO_TouchValuesChanged_EventArgs);
+                        break;
+                    case InteractionQueueObjectType.InputChanged:
+                        break;
+                    case InteractionQueueObjectType.Error:
+                        break;
+                    default:
+                        Logger.Instance.Log(LogPriority.ALWAYS, this, "[ERROR] Cannot handle enqueued interaction event: " + interactionQueueItem.Type);
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.Log(LogPriority.ALWAYS, this, "[ERROR] Exception while handling input event: " + ex);
             }
         }
 
@@ -283,7 +294,6 @@ namespace tud.mci.tangram.TangramLector
                 inputQueue.Enqueue(new InteractionQueueItem(timestamp, type, device, e, sender));
             }
         }
-
         #endregion
 
         #endregion
@@ -722,30 +732,41 @@ namespace tud.mci.tangram.TangramLector
             return true;
         }
 
+        readonly ConcurrentBag<BrailleIODevice> gesturingDevices = new ConcurrentBag<BrailleIODevice>();
+
         private void startGesture(List<BrailleIO_DeviceButton> pressedKeys, List<String> pressedGenKeys, BrailleIODevice device)
         {
-            //start gesture recording
-            BlobTracker blobTracker;
-            blobTrackers.TryGetValue(device, out blobTracker);
-            GestureRecognizer gestureRecognizer;
-            gestureRecognizers.TryGetValue(device, out gestureRecognizer);
+            if (pressedKeys != null && pressedGenKeys.Count < 2 
+                &&  (pressedGenKeys.Contains("hbr") || pressedKeys.Contains(BrailleIO_DeviceButton.Gesture)))
+            {
+                //start gesture recording
+                BlobTracker blobTracker;
+                blobTrackers.TryGetValue(device, out blobTracker);
+                GestureRecognizer gestureRecognizer;
+                gestureRecognizers.TryGetValue(device, out gestureRecognizer);
 
-            if (blobTracker != null && gestureRecognizer != null)
-            {
-                if (pressedKeys.Contains(BrailleIO_DeviceButton.Gesture) && pressedGenKeys.Count < 2)
+                if (blobTracker != null && gestureRecognizer != null)
                 {
-                    Mode |= InteractionMode.Gesture;
+                    if (pressedKeys.Contains(BrailleIO_DeviceButton.Gesture))
+                    {
+                        Mode |= InteractionMode.Gesture;
+                    }
+                    else if (pressedGenKeys.Contains("hbr")) // manipulation
+                    {
+                        Mode |= InteractionMode.Manipulation;
+                    }
+                    else
+                    {
+                        return;
+                    }
+
+                    if (!gesturingDevices.Contains(device)) gesturingDevices.Add(device);
                     startGestureTracking(blobTracker, gestureRecognizer);
                 }
-                else if (pressedGenKeys.Contains("hbr")) // manipulation
+                else
                 {
-                    Mode |= InteractionMode.Manipulation;
-                    startGestureTracking(blobTracker, gestureRecognizer);
-                }
-            }
-            else
-            {
-                initalizeGestureRecognition(device);
+                    initalizeGestureRecognition(device);
+                } 
             }
         }
 
@@ -765,18 +786,23 @@ namespace tud.mci.tangram.TangramLector
                 && releasedGenKeys.Count == 1 && pressedGenKeys.Count == 0)
             {
                 Mode &= ~InteractionMode.Gesture;
-                IClassificationResult result = classifyGesture(device);
-                fireClassifiedGestureEvent(result, device, releasedKeys, releasedGenKeys, pressedKeys, pressedGenKeys);
-
             }
             else if ((Mode & InteractionMode.Manipulation) == InteractionMode.Manipulation
                 && releasedGenKeys.Contains("hbr")
                 )
             {
                 Mode &= ~InteractionMode.Manipulation;
-                IClassificationResult result = classifyGesture(device);
-                fireClassifiedGestureEvent(result, device, releasedKeys, releasedGenKeys, pressedKeys, pressedGenKeys);
             }
+            else { return; }
+
+            if (gesturingDevices.Contains(device)) {
+                BrailleIODevice trash = device;
+                int i = 0;
+                while (!gesturingDevices.TryTake(out trash) && i++ < 10) { Thread.Sleep(5); }
+            }
+
+            IClassificationResult result = classifyGesture(device);
+            fireClassifiedGestureEvent(result, device, releasedKeys, releasedGenKeys, pressedKeys, pressedGenKeys);
         }
 
         private void fireClassifiedGestureEvent(IClassificationResult result, BrailleIODevice device, List<BrailleIO_DeviceButton> releasedKeys, List<String> releasedGenKeys, List<BrailleIO_DeviceButton> pressedKeys, List<String> pressedGenKeys)
