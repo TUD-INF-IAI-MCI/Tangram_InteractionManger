@@ -121,15 +121,22 @@ namespace tud.mci.tangram.TangramLector
         /// <returns>true if it could be added otherwise false</returns>
         public bool AddNewDevice(IBrailleIOAdapter device)
         {
-            if (device != null)
+            if (device != null && device.Device != null 
+                && !String.IsNullOrWhiteSpace(device.Device.Name))
             {
+                unregisterForEvents(device);
                 registerForEvents(device);
 
                 // gesture recognizer registration for the device
                 initalizeGestureRecognition(device.Device);
                 if (device.Connected)
                 {
-                    devices.Add(device.Device.Name, device);
+                    if (devices.ContainsKey(device.Device.Name))
+                    {
+                        devices[device.Device.Name] = device;
+                    }
+                    else { devices.Add(device.Device.Name, device); }
+                    return devices.ContainsKey(device.Device.Name);
                 }
             }
             return false;
@@ -832,7 +839,7 @@ namespace tud.mci.tangram.TangramLector
         private void handleTouchEvent(Object sender, BrailleIODevice brailleIODevice, BrailleIO_TouchValuesChanged_EventArgs brailleIO_TouchValuesChanged_EventArgs)
         {
 
-            if (gesturingDevices.Contains(brailleIODevice) 
+            if (gesturingDevices.Contains(brailleIODevice)
                 && ((Mode & InteractionMode.Gesture) == InteractionMode.Gesture
                 || (Mode & InteractionMode.Manipulation) == InteractionMode.Manipulation))
             {
