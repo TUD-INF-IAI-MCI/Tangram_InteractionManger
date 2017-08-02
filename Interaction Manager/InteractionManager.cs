@@ -13,6 +13,7 @@ using Gestures.Recognition.Preprocessing;
 using tud.mci.LanguageLocalization;
 using tud.mci.tangram.TangramLector.Control;
 using tud.mci.tangram.audio;
+using BrailleIO.Structs;
 
 namespace tud.mci.tangram.TangramLector
 {
@@ -32,8 +33,8 @@ namespace tud.mci.tangram.TangramLector
         readonly Dictionary<String, IBrailleIOAdapter> devices = new Dictionary<String, IBrailleIOAdapter>();
         readonly ConcurrentQueue<InteractionQueueItem> inputQueue = new ConcurrentQueue<InteractionQueueItem>();
 
-        readonly ConcurrentDictionary<BrailleIODevice, BlobTracker> blobTrackers = new ConcurrentDictionary<BrailleIODevice, BlobTracker>();
-        readonly ConcurrentDictionary<BrailleIODevice, GestureRecognizer> gestureRecognizers = new ConcurrentDictionary<BrailleIODevice, GestureRecognizer>();
+        readonly ConcurrentDictionary<BrailleIODevice, ITrackBlobs> blobTrackers = new ConcurrentDictionary<BrailleIODevice, ITrackBlobs>();
+        readonly ConcurrentDictionary<BrailleIODevice, IRecognizeGestures> gestureRecognizers = new ConcurrentDictionary<BrailleIODevice, IRecognizeGestures>();
 
         #endregion
 
@@ -64,6 +65,51 @@ namespace tud.mci.tangram.TangramLector
                 fireInteractionModeChangedEvent(old, _mode);
             }
         }
+
+        static readonly List<Type> _gestureClassifierTypes = new List<Type>()
+        {
+            typeof(Gestures.Recognition.Classifier.TapClassifier),
+            typeof(Gestures.Recognition.Classifier.MultitouchClassifier)            
+        };
+        static readonly object _classifierTypeLock = new object();
+        static List<Type> gestureClassifierTypes
+        {
+            get
+            {
+                lock (_classifierTypeLock)
+                {
+                    return InteractionManager._gestureClassifierTypes;
+                }
+            }
+        }
+
+
+        static Type _geRecType = typeof(GestureRecognizer);
+        /// <summary>
+        /// Gets or sets the type of the gesture recognizer to use for handling touch data.
+        /// </summary>
+        /// <value>
+        /// The type of the gesture recognizer - must implement <see cref="IRecognizeGestures"/>.
+        /// </value>
+        static public Type GestureRecognizerType
+        {
+            set
+            {
+                if (value is IRecognizeGestures)
+                    _geRecType = value;
+                else
+                    _geRecType = null;
+            }
+            get
+            {
+                if (_geRecType == null)
+                    _geRecType = typeof(GestureRecognizer);
+                return _geRecType;
+            }
+        }
+
+
+
         #endregion
 
         /// <summary>
@@ -121,7 +167,7 @@ namespace tud.mci.tangram.TangramLector
         /// <returns>true if it could be added otherwise false</returns>
         public bool AddNewDevice(IBrailleIOAdapter device)
         {
-            if (device != null && device.Device != null 
+            if (device != null && device.Device != null
                 && !String.IsNullOrWhiteSpace(device.Device.Name))
             {
                 unregisterForEvents(device);
@@ -682,53 +728,66 @@ namespace tud.mci.tangram.TangramLector
         private void initalizeGestureRecognition(BrailleIODevice device)
         {
             // gesture recognizer registration for the device
-            var blobTracker = new BlobTracker();
-            var gestureRecognizer = new GestureRecognizer(blobTracker);
+            ITrackBlobs blobTracker = new BlobTracker(); // TODO: make the blob tracker changeable?!
+            var gestureRecognizer = GetNewGestureRecognizer(blobTracker);// new GestureRecognizer(blobTracker);
 
-            //int c = 0;
+            if (gestureRecognizer != null && blobTracker != null)
+            {
+                //int c = 0;
 
-            // try to register blob tracker
-            blobTrackers.AddOrUpdate(device, blobTracker,
-                (key, existingBlobTracker) =>
-                {
-                    // If this delegate is invoked, then the key already exists.
-                    return blobTracker;
-                }
-            );
-
-            //while (!blobTrackers.TryAdd(device, blobTracker) && c++ < 20) { Thread.Sleep(5); };
-            //if (c > 19) throw new AccessViolationException("Cannot add blob tracker to dictionary - access denied");
-
-            // try to register gesture recognizer
-            gestureRecognizers.AddOrUpdate(device, gestureRecognizer,
-                (key, existingGestureRecognizer) =>
-                {
-                    // If this delegate is invoked, then the key already exists.
-                    if (existingGestureRecognizer != null)
+                // try to register blob tracker
+                blobTrackers.AddOrUpdate(device, blobTracker,
+                    (key, existingBlobTracker) =>
                     {
-                        existingGestureRecognizer.FinishEvaluation();
+                        // If this delegate is invoked, then the key already exists.
+                        return blobTracker;
                     }
-                    return gestureRecognizer;
+                );
+
+                //while (!blobTrackers.TryAdd(device, blobTracker) && c++ < 20) { Thread.Sleep(5); };
+                //if (c > 19) throw new AccessViolationException("Cannot add blob tracker to dictionary - access denied");
+
+                // try to register gesture recognizer
+                gestureRecognizers.AddOrUpdate(device, gestureRecognizer,
+                    (key, existingGestureRecognizer) =>
+                    {
+                        // If this delegate is invoked, then the key already exists.
+                        if (existingGestureRecognizer != null)
+                        {
+                            existingGestureRecognizer.FinishEvaluation();
+                        }
+                        return gestureRecognizer;
+                    }
+                );
+
+
+                IClassify[] classifieres = GetNewGestureClassifierInstances();
+                if (classifieres != null && classifieres.Length > 0)
+                {
+                    foreach (var classifier in classifieres)
+                    {
+                        if (classifier != null) gestureRecognizer.AddClassifier(classifier);
+                    }
                 }
-            );
 
-            //while (!gestureRecognizers.TryAdd(device, gestureRecognizer) && c++ < 40) { Thread.Sleep(5); };
-            //if (c > 39) throw new AccessViolationException("Cannot add gesture recognizer to dictionary - access denied");
+                ////while (!gestureRecognizers.TryAdd(device, gestureRecognizer) && c++ < 40) { Thread.Sleep(5); };
+                ////if (c > 39) throw new AccessViolationException("Cannot add gesture recognizer to dictionary - access denied");
 
-            var multitouchClassifier = new MultitouchClassifier();
-            var tabClassifier = new TapClassifier();
+                //var multitouchClassifier = new MultitouchClassifier();
+                //var tabClassifier = new TapClassifier();
 
-            gestureRecognizer.AddClassifier(tabClassifier);
-            gestureRecognizer.AddClassifier(multitouchClassifier);
+                //gestureRecognizer.AddClassifier(tabClassifier);
+                //gestureRecognizer.AddClassifier(multitouchClassifier);
 
-            blobTracker.InitiateTracking();
+                blobTracker.InitiateTracking();
+            }
         }
 
         bool unregisterGestureRecognition(BrailleIODevice device)
         {
             int c = 0;
-            BlobTracker trash;
-            GestureRecognizer trash2;
+            ITrackBlobs trash;
+            IRecognizeGestures trash2;
             while (c++ < 10 && blobTrackers.TryRemove(device, out trash)) ;
             while (c++ < 20 && gestureRecognizers.TryRemove(device, out trash2)) ;
             return true;
@@ -747,9 +806,9 @@ namespace tud.mci.tangram.TangramLector
                 && (pressedGenKeys.Contains("hbr") || pressedKeys.Contains(BrailleIO_DeviceButton.Gesture)))
             {
                 //start gesture recording
-                BlobTracker blobTracker;
+                ITrackBlobs blobTracker;
                 blobTrackers.TryGetValue(device, out blobTracker);
-                GestureRecognizer gestureRecognizer;
+                IRecognizeGestures gestureRecognizer;
                 gestureRecognizers.TryGetValue(device, out gestureRecognizer);
 
                 if (blobTracker != null && gestureRecognizer != null)
@@ -777,7 +836,7 @@ namespace tud.mci.tangram.TangramLector
             }
         }
 
-        private void startGestureTracking(BlobTracker blobTracker, GestureRecognizer gestureRecognizer)
+        private void startGestureTracking(ITrackBlobs blobTracker, IRecognizeGestures gestureRecognizer)
         {
             if (blobTracker != null && gestureRecognizer != null)
             {
@@ -826,7 +885,7 @@ namespace tud.mci.tangram.TangramLector
         private IClassificationResult classifyGesture(BrailleIODevice device)
         {
             IClassificationResult result = null;
-            GestureRecognizer gestureRecognizer;
+            IRecognizeGestures gestureRecognizer;
             gestureRecognizers.TryGetValue(device, out gestureRecognizer);
 
             if (gestureRecognizer != null)
@@ -843,7 +902,7 @@ namespace tud.mci.tangram.TangramLector
                 && ((Mode & InteractionMode.Gesture) == InteractionMode.Gesture
                 || (Mode & InteractionMode.Manipulation) == InteractionMode.Manipulation))
             {
-                BlobTracker blobTracker;
+                ITrackBlobs blobTracker;
                 blobTrackers.TryGetValue(brailleIODevice, out blobTracker);
 
                 if (brailleIO_TouchValuesChanged_EventArgs != null && blobTracker != null)
@@ -899,6 +958,125 @@ namespace tud.mci.tangram.TangramLector
         }
 
         #endregion
+
+        #region Gesture Recognizer and Classifier Handling
+
+        /// <summary>
+        /// Adds a new type to the list of gesture classifier types.
+        /// </summary>
+        /// <param name="_type">The type to add - must implement the <see cref="IClassify"/>.</param>
+        /// <param name="position">The position to add to.</param>
+        /// <returns>The new array of registered classifier types.</returns>
+        public static Type[] AddGestureClassifierType(Type _type, int position = Int32.MaxValue)
+        {
+            try
+            {
+                if (_type != null && _type is IClassify && !gestureClassifierTypes.Contains(_type))
+                {
+                    if (position >= gestureClassifierTypes.Count)
+                        gestureClassifierTypes.Add(_type);
+                    else
+                        gestureClassifierTypes.Insert(Math.Max(0, position), _type);
+
+                    Logger.Instance.Log(LogPriority.DEBUG, "InteractionManager", "[NOTICE] " + _type.ToString() + " successfully added to classifier type list.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.Log(LogPriority.ALWAYS, "InteractionManager", "[FATAL ERROR] can't add classifier type to list.", ex);
+            }
+
+            return gestureClassifierTypes.ToArray();
+        }
+
+        /// <summary>
+        /// Removes the specific type from the gesture classifier type list.
+        /// </summary>
+        /// <param name="_type">The type to remove.</param>
+        /// <returns>The new array of registered classifier types.</returns>
+        public static Type[] RemoveGestureClassifierType(Type _type)
+        {
+            try
+            {
+                if (_type != null && gestureClassifierTypes.Contains(_type))
+                {
+                    gestureClassifierTypes.Remove(_type);
+                    Logger.Instance.Log(LogPriority.DEBUG, "InteractionManager", "[NOTICE] " + _type.ToString() + " successfully removed from classifier type list.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.Log(LogPriority.ALWAYS, "InteractionManager", "[FATAL ERROR] can't remove classifier type from list.", ex);
+            }
+
+            return gestureClassifierTypes.ToArray();
+        }
+
+        /// <summary>
+        /// Gets all registered gesture classifier types.
+        /// </summary>
+        /// <returns>Array of registered classifier types.</returns>
+        public static Type[] GetGestureClassifierTypes()
+        {
+            return gestureClassifierTypes.ToArray();
+        }
+
+        /// <summary>
+        /// Generates new instances for all registered gesture classifier types.
+        /// </summary>
+        /// <returns>Array of registered IClassify instances.</returns>
+        public static IClassify[] GetNewGestureClassifierInstances()
+        {
+            lock (_classifierTypeLock)
+            {
+                if (gestureClassifierTypes != null && gestureClassifierTypes.Count > 0)
+                {
+                    IClassify[] classifiers = new IClassify[gestureClassifierTypes.Count];
+                    for (int i = 0; i < gestureClassifierTypes.Count; i++)
+                    {
+                        try
+                        {
+                            IClassify c = Activator.CreateInstance(gestureClassifierTypes[i]) as IClassify;
+                            classifiers[i] = c;
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Instance.Log(LogPriority.ALWAYS, "InteractionManager", "[FATAL ERROR] can't create instance of classifier type from list.", ex);
+                        }
+                    }
+                    return classifiers;
+                }
+            }
+
+            return null;
+        }
+
+
+        /// <summary>
+        /// Gets the new gesture recognizer.
+        /// </summary>
+        /// <returns><see cref="IRecognizeGestures"/> instance of the registered type.</returns>
+        static IRecognizeGestures GetNewGestureRecognizer(ITrackBlobs blobTracker)
+        {
+            if (GestureRecognizerType != null && blobTracker != null)
+            {
+                try
+                {
+                    IRecognizeGestures c = Activator.CreateInstance(GestureRecognizerType, new object[1] { blobTracker }) as IRecognizeGestures;
+                    return c;
+                }
+                catch (Exception ex)
+                {
+                    Logger.Instance.Log(LogPriority.ALWAYS, "InteractionManager", "[FATAL ERROR] can't create instance of gesture recognizer type.", ex);
+                }
+            }
+
+            return null;
+        }
+
+
+        #endregion
+
 
     }
 
