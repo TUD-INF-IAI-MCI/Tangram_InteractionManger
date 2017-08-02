@@ -890,7 +890,7 @@ namespace tud.mci.tangram.TangramLector
 
             if (gestureRecognizer != null)
             {
-                result = gestureRecognizer.FinishEvaluation();
+                result = gestureRecognizer.FinishEvaluation(false);
             }
             return result;
         }
