@@ -66,13 +66,13 @@ namespace tud.mci.tangram.TangramLector
             }
         }
 
-        static readonly List<Type> _gestureClassifierTypes = new List<Type>()
+        static readonly List<IClassifyActivation> _gestureClassifierTypes = new List<IClassifyActivation>()
         {
-            typeof(Gestures.Recognition.Classifier.TapClassifier),
-            typeof(Gestures.Recognition.Classifier.MultitouchClassifier)            
+            new IClassifyActivation(typeof(Gestures.Recognition.Classifier.TapClassifier)),
+            new IClassifyActivation(typeof(Gestures.Recognition.Classifier.MultitouchClassifier))            
         };
         static readonly object _classifierTypeLock = new object();
-        static List<Type> gestureClassifierTypes
+        static List<IClassifyActivation> gestureClassifierTypes
         {
             get
             {
@@ -967,11 +967,11 @@ namespace tud.mci.tangram.TangramLector
         /// <param name="_type">The type to add - must implement the <see cref="IClassify"/>.</param>
         /// <param name="position">The position to add to.</param>
         /// <returns>The new array of registered classifier types.</returns>
-        public static Type[] AddGestureClassifierType(Type _type, int position = Int32.MaxValue)
+        public static IClassifyActivation[] AddGestureClassifierType(IClassifyActivation _type, int position = Int32.MaxValue)
         {
             try
             {
-                if (_type != null && _type is IClassify && !gestureClassifierTypes.Contains(_type))
+                if (!gestureClassifierTypes.Contains(_type))
                 {
                     if (position >= gestureClassifierTypes.Count)
                         gestureClassifierTypes.Add(_type);
@@ -994,11 +994,11 @@ namespace tud.mci.tangram.TangramLector
         /// </summary>
         /// <param name="_type">The type to remove.</param>
         /// <returns>The new array of registered classifier types.</returns>
-        public static Type[] RemoveGestureClassifierType(Type _type)
+        public static IClassifyActivation[] RemoveGestureClassifierType(IClassifyActivation _type)
         {
             try
             {
-                if (_type != null && gestureClassifierTypes.Contains(_type))
+                if (gestureClassifierTypes.Contains(_type))
                 {
                     gestureClassifierTypes.Remove(_type);
                     Logger.Instance.Log(LogPriority.DEBUG, "InteractionManager", "[NOTICE] " + _type.ToString() + " successfully removed from classifier type list.");
@@ -1016,7 +1016,7 @@ namespace tud.mci.tangram.TangramLector
         /// Gets all registered gesture classifier types.
         /// </summary>
         /// <returns>Array of registered classifier types.</returns>
-        public static Type[] GetGestureClassifierTypes()
+        public static IClassifyActivation[] GetGestureClassifierTypes()
         {
             return gestureClassifierTypes.ToArray();
         }
@@ -1036,7 +1036,9 @@ namespace tud.mci.tangram.TangramLector
                     {
                         try
                         {
-                            IClassify c = Activator.CreateInstance(gestureClassifierTypes[i]) as IClassify;
+                            var classifier = gestureClassifierTypes[i];
+                            IClassify c = Activator.CreateInstance(classifier.ClassType, classifier.Params) as IClassify;
+                            if (classifier.PostInitAct != null) classifier.PostInitAct(c);
                             classifiers[i] = c;
                         }
                         catch (Exception ex)
@@ -1072,6 +1074,26 @@ namespace tud.mci.tangram.TangramLector
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// Refreshes the gesture recognizer to device assignments.
+        /// </summary>
+        /// <returns><c>true</c> if the refresh was successful.</returns>
+        public bool RefreshGestureRecognition2DeviceAssignments()
+        {
+            foreach (var device in gestureRecognizers.Keys)
+            {
+                try
+                {
+                    if (device != null) initalizeGestureRecognition(device);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Instance.Log(LogPriority.ALWAYS, this, "[FATAL ERROR] Exception in refreshing gesture recognizer for device.", ex);
+                }
+            }
+            return true;
         }
 
 
@@ -1288,6 +1310,55 @@ namespace tud.mci.tangram.TangramLector
         {
             OldValue = oldValue;
             NewValue = newValue;
+        }
+    }
+
+
+    /// <summary>
+    /// An struct for wrapping anonymous activations of new instances for gesture classifiers.
+    /// </summary>
+    public struct IClassifyActivation
+    {
+        /// <summary>
+        /// The class type to instantiate.
+        /// The type must implement the interface <see cref="IClassify"/>
+        /// </summary>
+        public readonly Type ClassType;
+
+        /// <summary>
+        /// The parameters for the constructor.
+        /// </summary>
+        public readonly object[] Params;
+
+        /// <summary>
+        /// An Action to be executed after creating a new instance.
+        /// </summary>
+        /// <param name="classifierInstance">The classifier instance.</param>
+        public delegate void postInitAction(IClassify classifierInstance);
+
+        /// <summary>
+        /// The post initialize action to perform after activating a new instance.
+        /// </summary>
+        public readonly postInitAction PostInitAct;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="IClassifyActivation"/> struct.
+        /// </summary>
+        /// <param name="_type">The type of the classifier.</param>
+        /// <param name="_params">The parameters to use for calling the constructor of this class.</param>
+        /// <param name="action">An action to be performed after creating a new instance.</param>
+        /// <exception cref="System.ArgumentNullException">_type - The type of the classifier cannot be null</exception>
+        /// <exception cref="System.ArgumentException">The type fro the classifier have to implement the IClassify interface. - _type</exception>
+        public IClassifyActivation(Type _type, object[] _params = null, postInitAction action = null)
+        {
+            if (_type == null)
+                throw new ArgumentNullException("_type", "The type of the classifier cannot be null");
+            if (!(typeof(IClassify).IsAssignableFrom(_type)))
+                throw new ArgumentException("The type for the classifier have to implement the IClassify interface.", "_type");
+
+            ClassType = _type;
+            Params = _params;
+            PostInitAct = action;
         }
     }
 
