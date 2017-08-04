@@ -95,7 +95,7 @@ namespace tud.mci.tangram.TangramLector
         {
             set
             {
-                if (value is IRecognizeGestures)
+                if (value != null && typeof(IRecognizeGestures).IsAssignableFrom(value))
                     _geRecType = value;
                 else
                     _geRecType = null;
@@ -891,13 +891,13 @@ namespace tud.mci.tangram.TangramLector
             if (gestureRecognizer != null)
             {
                 result = gestureRecognizer.FinishEvaluation(false);
+
             }
             return result;
         }
 
         private void handleTouchEvent(Object sender, BrailleIODevice brailleIODevice, BrailleIO_TouchValuesChanged_EventArgs brailleIO_TouchValuesChanged_EventArgs)
         {
-
             if (gesturingDevices.Contains(brailleIODevice)
                 && ((Mode & InteractionMode.Gesture) == InteractionMode.Gesture
                 || (Mode & InteractionMode.Manipulation) == InteractionMode.Manipulation))
@@ -907,7 +907,12 @@ namespace tud.mci.tangram.TangramLector
 
                 if (brailleIO_TouchValuesChanged_EventArgs != null && blobTracker != null)
                 {
-                    Frame f = getFrameFromSampleSet(brailleIO_TouchValuesChanged_EventArgs.touches);
+                    Frame f = null;
+                    if (brailleIO_TouchValuesChanged_EventArgs.DetailedTouches != null &&
+                        brailleIO_TouchValuesChanged_EventArgs.DetailedTouches.Count > 0)
+                        f = new Frame(DateTime.Now, brailleIO_TouchValuesChanged_EventArgs.DetailedTouches.ToArray());
+                    else
+                        f = getFrameFromSampleSet(brailleIO_TouchValuesChanged_EventArgs.touches);
                     blobTracker.AddFrame(f);
                 }
             }
