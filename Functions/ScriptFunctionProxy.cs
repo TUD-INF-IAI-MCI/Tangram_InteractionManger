@@ -12,7 +12,12 @@ namespace tud.mci.tangram.TangramLector
 
         private static readonly ScriptFunctionProxy _instance = new ScriptFunctionProxy();
         private InteractionManager interactionManager;
-        
+
+        /// <summary>
+        /// The global settings storage for sharing settings over multiple accessors.
+        /// </summary>
+        public readonly System.Collections.Concurrent.ConcurrentDictionary<String, Object> GlobalSettings = new System.Collections.Concurrent.ConcurrentDictionary<string, object>();
+
         #endregion
 
         #region Constructor / Destructor / Singleton
