@@ -39,16 +39,36 @@ namespace tud.mci.tangram.TangramLector
         /// </summary>
         /// <value>The device.</value>
         public BrailleIO.BrailleIODevice Device { get; protected set; }
+
+        protected List<BrailleIO_DeviceButton> _pressedGeneralKeys = null;
         /// <summary>
         /// Gets or sets the pressed general keys.
         /// </summary>
         /// <value>The pressed general keys.</value>
-        public List<BrailleIO_DeviceButton> PressedGeneralKeys { get; protected set; }
+        public List<BrailleIO_DeviceButton> PressedGeneralKeys
+        {
+            get { return _pressedGeneralKeys; }
+            set
+            {
+                _pressedGeneralKeys = value;
+                _pressedGeneralKeys.Sort();
+            }
+        }
+
+        protected List<String> _pressedGenericKeys = null;
         /// <summary>
         /// Gets or sets the pressed generic keys.
         /// </summary>
         /// <value>The interpreted pressed generic keys.</value>
-        public List<String> PressedGenericKeys { get; protected set; }
+        public List<String> PressedGenericKeys
+        {
+            get { return _pressedGenericKeys; }
+            set
+            {
+                _pressedGenericKeys = value;
+                _pressedGenericKeys.Sort();
+            }
+        }
         /// <summary>
         /// Gets or sets the timestamp the interaction occurs.
         /// </summary>
@@ -76,16 +96,36 @@ namespace tud.mci.tangram.TangramLector
     /// </summary>
     public class ButtonReleasedEventArgs : BrailleIOInteractionEventArgs
     {
+
+        protected List<BrailleIO_DeviceButton> _releasedGeneralKeys = null;
         /// <summary>
         /// Gets or sets the released general keys.
         /// </summary>
         /// <value>The released general keys.</value>
-        public List<BrailleIO_DeviceButton> ReleasedGeneralKeys { get; private set; }
+        public List<BrailleIO_DeviceButton> ReleasedGeneralKeys
+        {
+            get { return _releasedGeneralKeys; }
+            set
+            {
+                _releasedGeneralKeys = value;
+                _releasedGeneralKeys.Sort();
+            }
+        }
+
+        protected List<String> _releasedGenericKeys = null;
         /// <summary>
         /// Gets or sets the released generic keys.
         /// </summary>
         /// <value>The interpreted released generic keys.</value>
-        public List<String> ReleasedGenericKeys { get; private set; }
+        public List<String> ReleasedGenericKeys
+        {
+            get { return _releasedGenericKeys; }
+            set
+            {
+                _releasedGenericKeys = value;
+                _releasedGenericKeys.Sort();
+            }
+        }
         /// <summary>
         /// Initializes a new instance of the <see cref="ButtonReleasedEventArgs"/> class.
         /// </summary>
@@ -112,7 +152,7 @@ namespace tud.mci.tangram.TangramLector
             : base(device, pressedGeneralKeys, pressedGenericKeys)
         { }
     }
-    
+
     /// <summary>
     /// extend the <see cref="ButtonReleasedEventArgs"/> event args with members for gestures.
     /// </summary>
