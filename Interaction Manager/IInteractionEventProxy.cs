@@ -51,7 +51,8 @@ namespace tud.mci.tangram.TangramLector
             set
             {
                 _pressedGeneralKeys = value;
-                _pressedGeneralKeys.Sort();
+                if (_pressedGeneralKeys != null && _pressedGeneralKeys.Count > 1) 
+                    _pressedGeneralKeys.Sort();
             }
         }
 
@@ -66,7 +67,8 @@ namespace tud.mci.tangram.TangramLector
             set
             {
                 _pressedGenericKeys = value;
-                _pressedGenericKeys.Sort();
+                if (_pressedGenericKeys != null && _pressedGenericKeys.Count > 1) 
+                    _pressedGenericKeys.Sort();
             }
         }
         /// <summary>
@@ -108,7 +110,9 @@ namespace tud.mci.tangram.TangramLector
             set
             {
                 _releasedGeneralKeys = value;
-                _releasedGeneralKeys.Sort();
+                if (_releasedGeneralKeys != null && _releasedGeneralKeys.Count > 1) 
+                    _releasedGeneralKeys.Sort();
+
             }
         }
 
@@ -123,7 +127,8 @@ namespace tud.mci.tangram.TangramLector
             set
             {
                 _releasedGenericKeys = value;
-                _releasedGenericKeys.Sort();
+                if (_releasedGenericKeys != null && _releasedGenericKeys.Count > 1) 
+                    _releasedGenericKeys.Sort();
             }
         }
         /// <summary>
