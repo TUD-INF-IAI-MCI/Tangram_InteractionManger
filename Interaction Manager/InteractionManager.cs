@@ -1,19 +1,19 @@
-﻿using System;
+﻿using BrailleIO;
+using BrailleIO.Interface;
+using BrailleIO.Structs;
+using Gestures.Recognition;
+using Gestures.Recognition.GestureData;
+using Gestures.Recognition.Interfaces;
+using Gestures.Recognition.Preprocessing;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Timers;
-using BrailleIO;
-using BrailleIO.Interface;
-using Gestures.Recognition;
-using Gestures.Recognition.GestureData;
-using Gestures.Recognition.Interfaces;
-using Gestures.Recognition.Preprocessing;
 using tud.mci.LanguageLocalization;
-using tud.mci.tangram.TangramLector.Control;
 using tud.mci.tangram.audio;
-using BrailleIO.Structs;
+using tud.mci.tangram.TangramLector.Control;
 
 namespace tud.mci.tangram.TangramLector
 {
@@ -406,6 +406,12 @@ namespace tud.mci.tangram.TangramLector
                 adapter.keyPressed += new EventHandler<BrailleIO_KeyPressed_EventArgs>(adapter_keyPressed);
                 adapter.keyStateChanged += new EventHandler<BrailleIO_KeyStateChanged_EventArgs>(adapter_keyStateChanged);
                 adapter.touchValuesChanged += new EventHandler<BrailleIO_TouchValuesChanged_EventArgs>(adapter_touchValuesChanged);
+
+                if (adapter is IBrailleIOAdapter2)
+                {
+                    ((IBrailleIOAdapter2)adapter).keyCombinationReleased += InteractionManager_keyCombinationReleased;
+                }
+            
             }
             catch (Exception)
             { }
@@ -421,6 +427,11 @@ namespace tud.mci.tangram.TangramLector
                 adapter.keyPressed -= new EventHandler<BrailleIO_KeyPressed_EventArgs>(adapter_keyPressed);
                 adapter.keyStateChanged -= new EventHandler<BrailleIO_KeyStateChanged_EventArgs>(adapter_keyStateChanged);
                 adapter.touchValuesChanged -= new EventHandler<BrailleIO_TouchValuesChanged_EventArgs>(adapter_touchValuesChanged);
+
+                if (adapter is IBrailleIOAdapter2)
+                {
+                    ((IBrailleIOAdapter2)adapter).keyCombinationReleased -= InteractionManager_keyCombinationReleased;
+                }            
             }
             catch (Exception)
             { }
@@ -477,6 +488,11 @@ namespace tud.mci.tangram.TangramLector
             {
                 checkForKeyCombination(e.Device, e.PressedGeneralKeys, e.PressedGenericKeys, e.ReleasedGeneralKeys, e.ReleasedGenericKeys);
             }
+        }
+
+        void InteractionManager_keyCombinationReleased(object sender, BrailleIO_KeyCombinationReleased_EventArgs e)
+        {
+            // TODO: handle this
         }
 
         #endregion
