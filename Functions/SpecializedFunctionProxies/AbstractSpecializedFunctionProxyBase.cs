@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BrailleIO.Interface;
+using System;
 
 namespace tud.mci.tangram.TangramLector.SpecializedFunctionProxies
 {
@@ -7,7 +8,7 @@ namespace tud.mci.tangram.TangramLector.SpecializedFunctionProxies
     /// with an abstract implementation of <see cref="IInteractionContextProxy"/> including a zIndex 
     /// and an activation flag.
     /// </summary>
-    public class AbstractSpecializedFunctionProxyBase : AbstractInteractionEventProxy, IInteractionContextProxy
+    public class AbstractSpecializedFunctionProxyBase : AbstractInteractionEventProxy, IInteractionContextProxy, IActivatable
     {
         #region Members
 
