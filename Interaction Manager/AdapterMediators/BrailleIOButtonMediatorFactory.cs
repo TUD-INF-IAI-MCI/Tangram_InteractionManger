@@ -94,7 +94,7 @@ namespace tud.mci.tangram.TangramLector
                         MediatorList.TryAdd(device.Name, obj);
                         if (obj is AbstractBrailleIOButtonMediatorBase)
                         {
-                            ((AbstractBrailleIOButtonMediatorBase)obj).setDevice(device);
+                            ((AbstractBrailleIOButtonMediatorBase)obj).SetDevice(device);
                         }
                         return obj;
                     }

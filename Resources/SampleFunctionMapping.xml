@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<mappings>
+  <function 
+    name="callMeFunction"
+    description="some function to handle something">
+    <mapping device="_default">
+      f1,f2, fn3, gesture,none,unknown,
+    </mapping>
+    <mapping device="BrailleDis" priority="1">
+      k1,k2,k3
+    </mapping>
+  </function>
+</mappings>

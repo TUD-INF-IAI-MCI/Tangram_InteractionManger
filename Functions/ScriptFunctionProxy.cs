@@ -49,6 +49,7 @@ namespace tud.mci.tangram.TangramLector
                         this.interactionManager.ButtonReleased -= new EventHandler<ButtonReleasedEventArgs>(interactionManager_ButtonReleased);
                         this.interactionManager.GesturePerformed -= new EventHandler<GestureEventArgs>(interactionManager_GesturePerformed);
                         this.interactionManager.ButtonCombinationReleased -= new EventHandler<ButtonReleasedEventArgs>(interactionManager_ButtonCombinationReleased);
+                        this.interactionManager.FunctionCall -= new EventHandler<FunctionCallInteractionEventArgs>(interactionManager_FunctionCall);
                     }
                     catch { }
                 }
@@ -57,6 +58,7 @@ namespace tud.mci.tangram.TangramLector
                 this.interactionManager.ButtonReleased += new EventHandler<ButtonReleasedEventArgs>(interactionManager_ButtonReleased);
                 this.interactionManager.GesturePerformed += new EventHandler<GestureEventArgs>(interactionManager_GesturePerformed);
                 this.interactionManager.ButtonCombinationReleased += new EventHandler<ButtonReleasedEventArgs>(interactionManager_ButtonCombinationReleased);
+                this.interactionManager.FunctionCall += new EventHandler<FunctionCallInteractionEventArgs>(interactionManager_FunctionCall);
             }
         }
 
@@ -107,6 +109,17 @@ namespace tud.mci.tangram.TangramLector
                 sentButtonCombinationReleasedToRegisteredSpecifiedFunctionProxies(sender, ref e);
             }
         }
+
+
+        private void interactionManager_FunctionCall(object sender, FunctionCallInteractionEventArgs e)
+        {
+            if (e != null && !String.IsNullOrEmpty(e.Function))
+            {
+                bool canceled;
+                sentFunctionCallToRegisteredSpecifiedFunctionProxies(sender, ref e, out canceled);
+            }
+        }
+
 
         #endregion
     }

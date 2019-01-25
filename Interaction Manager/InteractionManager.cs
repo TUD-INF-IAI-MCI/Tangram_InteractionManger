@@ -8,17 +8,21 @@ using Gestures.Recognition.Preprocessing;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Timers;
 using tud.mci.LanguageLocalization;
 using tud.mci.tangram.audio;
+using tud.mci.tangram.TangramLector.Button2FunctionMapping;
 using tud.mci.tangram.TangramLector.Control;
+using tud.mci.tangram.TangramLector.Interaction_Manager;
 
 namespace tud.mci.tangram.TangramLector
 {
     /// <summary>
-    /// Interprets and forwards input interaction from <see cref="BrailleIO.Interface.IBrailleIOAdapter"/>
+    /// Interprets and forwards input interaction from 
+    /// <see cref="BrailleIO.Interface.IBrailleIOAdapter"/>
     /// </summary>
     public class InteractionManager : AbstractInteractionEventProxy, IDisposable, ILocalizable
     {
@@ -35,6 +39,9 @@ namespace tud.mci.tangram.TangramLector
 
         readonly ConcurrentDictionary<BrailleIODevice, ITrackBlobs> blobTrackers = new ConcurrentDictionary<BrailleIODevice, ITrackBlobs>();
         readonly ConcurrentDictionary<BrailleIODevice, IRecognizeGestures> gestureRecognizers = new ConcurrentDictionary<BrailleIODevice, IRecognizeGestures>();
+
+        static readonly ButtonMappingLoader mappingLoader = new ButtonMappingLoader();
+       // Dictionary<string, Dictionary<string, List<string>>> buttonCombination2FunctionMappings = new Dictionary<string, Dictionary<string, List<string>>>();
 
         #endregion
 
@@ -108,9 +115,15 @@ namespace tud.mci.tangram.TangramLector
             }
         }
 
-
+        /// <summary>
+        /// The button combination mapper. 
+        /// A class for mapping device-related button combinations to function names.
+        /// </summary>
+        public readonly Button2FunctionProxy ButtoncombinationMapper = new Button2FunctionProxy();
 
         #endregion
+
+        #region Singleton
 
         /// <summary>
         /// Gets the singleton instance.
@@ -125,6 +138,8 @@ namespace tud.mci.tangram.TangramLector
 
         #endregion
 
+        #endregion
+
         #region Constructor / Destructor
 
         /// <summary>
@@ -133,7 +148,7 @@ namespace tud.mci.tangram.TangramLector
         private InteractionManager()
         {
             createInputQueueThread();
-            this.ButtonReleased += new EventHandler<ButtonReleasedEventArgs>(InteractionManager_ButtonReleased);
+            //this.ButtonReleased += new EventHandler<ButtonReleasedEventArgs>(InteractionManager_ButtonReleased);
         }
 
         ~InteractionManager()
@@ -159,6 +174,8 @@ namespace tud.mci.tangram.TangramLector
         }
 
         #endregion
+
+        #region Device Handling
 
         /// <summary>
         /// Adds a new device to the InteractionManger.
@@ -209,6 +226,10 @@ namespace tud.mci.tangram.TangramLector
             return true;
         }
 
+        #endregion
+
+        #region External Controlling Functions
+
         /// <summary>
         /// Changes the interaction mode.
         /// </summary>
@@ -228,7 +249,9 @@ namespace tud.mci.tangram.TangramLector
             Logger.Instance.Log(LogPriority.MIDDLE, this, "[INTERACTION] abort speech output");
         }
 
-        #region Input queue
+        #endregion
+
+        #region Interaction Input Queue
 
         #region Thread
 
@@ -296,6 +319,9 @@ namespace tud.mci.tangram.TangramLector
                         break;
                     case InteractionQueueObjectType.Error:
                         break;
+                    case InteractionQueueObjectType.ButtonCombination:
+                        handleButtonCombinationEvent(interactionQueueItem.Sender, interactionQueueItem.Device, interactionQueueItem.Args as BrailleIO_KeyCombinationReleased_EventArgs);
+                        break;
                     default:
                         Logger.Instance.Log(LogPriority.ALWAYS, this, "[ERROR] Cannot handle enqueued interaction event: " + interactionQueueItem.Type);
                         break;
@@ -355,45 +381,131 @@ namespace tud.mci.tangram.TangramLector
 
         private void handleKeyPressedEvent(Object sender, BrailleIODevice brailleIODevice, BrailleIO_KeyPressed_EventArgs brailleIO_KeyPressed_EventArgs)
         {
-            List<String> pressedGenKeys = new List<String>();
-            List<BrailleIO_DeviceButton> pressedKeys = new List<BrailleIO_DeviceButton>();
-            var mediator = BrailleIOButtonMediatorFactory.GetMediator(sender as BrailleIO.Interface.IBrailleIOAdapter);
-            if (mediator != null)
+            if (brailleIO_KeyPressed_EventArgs != null)
             {
-                pressedGenKeys = mediator.GetAllPressedGenericButtons(brailleIO_KeyPressed_EventArgs);
-                pressedKeys = mediator.GetAllPressedGeneralButtons(brailleIO_KeyPressed_EventArgs);
-            }
-            if ((pressedKeys != null && pressedKeys.Count > 0) || (pressedGenKeys != null && pressedGenKeys.Count > 0)) fireButtonPressedEvent(brailleIODevice, pressedKeys, pressedGenKeys);
+                List<String> pressedGenKeys = new List<String>();
+                BrailleIO_DeviceButton pressedKeys = BrailleIO_DeviceButton.None;
+                BrailleIO_BrailleKeyboardButton pressedKbKeys = BrailleIO_BrailleKeyboardButton.None;
+                BrailleIO_AdditionalButton[] pressedAddKeys = null;
 
-            startGesture(pressedKeys, pressedGenKeys, brailleIODevice);
+                var mediator = BrailleIOButtonMediatorFactory.GetMediator(sender as IBrailleIOAdapter);
+                if (mediator != null)
+                {
+                    pressedGenKeys = mediator.GetAllPressedGenericButtons(brailleIO_KeyPressed_EventArgs);
+                    pressedKeys = mediator.GetAllPressedGeneralButtons(brailleIO_KeyPressed_EventArgs);
+                    pressedKbKeys = mediator.GetAllPressedBrailleKeyboardButtons(brailleIO_KeyPressed_EventArgs);
+                    pressedAddKeys = mediator.GetAllPressedAdditionalButtons(brailleIO_KeyPressed_EventArgs);
+                }
+                if (pressedKeys != BrailleIO_DeviceButton.None || pressedKbKeys != BrailleIO_BrailleKeyboardButton.None || pressedAddKeys != null)
+                    fireButtonPressedEvent(brailleIODevice, pressedKeys, pressedKbKeys, pressedAddKeys, pressedGenKeys);
+
+                startGesture(pressedKeys, pressedKbKeys, pressedAddKeys, pressedGenKeys, brailleIODevice);
+            }
         }
 
         private void handleKeyStateChangedEvent(Object sender, BrailleIODevice brailleIODevice, BrailleIO_KeyStateChanged_EventArgs brailleIO_KeyStateChanged_EventArgs)
         {
             List<String> pressedGenKeys = new List<String>();
-            List<BrailleIO_DeviceButton> pressedKeys = new List<BrailleIO_DeviceButton>();
+            BrailleIO_DeviceButton pressedKeys = BrailleIO_DeviceButton.None;
+            BrailleIO_BrailleKeyboardButton pressedKbKeys = BrailleIO_BrailleKeyboardButton.None;
+            BrailleIO_AdditionalButton[] pressedAddKeys = null;
             List<String> releasedGenKeys = new List<String>();
-            List<BrailleIO_DeviceButton> releasedKeys = new List<BrailleIO_DeviceButton>();
+            BrailleIO_DeviceButton releasedKeys = BrailleIO_DeviceButton.None;
+            BrailleIO_BrailleKeyboardButton releasedKbKeys = BrailleIO_BrailleKeyboardButton.None;
+            BrailleIO_AdditionalButton[] releasedAddKeys = null;
+
+            BrailleIO.Structs.KeyCombinationItem kbi = new BrailleIO.Structs.KeyCombinationItem();
 
             var mediator = BrailleIOButtonMediatorFactory.GetMediator(sender as BrailleIO.Interface.IBrailleIOAdapter);
             if (mediator != null)
             {
                 pressedGenKeys = mediator.GetAllPressedGenericButtons(brailleIO_KeyStateChanged_EventArgs);
                 pressedKeys = mediator.GetAllPressedGeneralButtons(brailleIO_KeyStateChanged_EventArgs);
+                pressedKbKeys = mediator.GetAllPressedBrailleKeyboardButtons(brailleIO_KeyStateChanged_EventArgs);
+                pressedAddKeys = mediator.GetAllPressedAdditionalButtons(brailleIO_KeyStateChanged_EventArgs);
+
                 releasedGenKeys = mediator.GetAllReleasedGenericButtons(brailleIO_KeyStateChanged_EventArgs);
                 releasedKeys = mediator.GetAllReleasedGeneralButtons(brailleIO_KeyStateChanged_EventArgs);
+                releasedKbKeys = mediator.GetAllReleasedBrailleKeyboardButtons(brailleIO_KeyStateChanged_EventArgs);
+                releasedAddKeys = mediator.GetAllReleasedAdditionalButtons(brailleIO_KeyStateChanged_EventArgs);
             }
-            if ((pressedKeys != null && pressedKeys.Count > 0) || (pressedGenKeys != null && pressedGenKeys.Count > 0)) fireButtonPressedEvent(brailleIODevice, pressedKeys, pressedGenKeys);
-            if ((releasedKeys != null && releasedKeys.Count > 0) || (releasedGenKeys != null && releasedGenKeys.Count > 0)) fireButtonReleasedEvent(brailleIODevice, pressedKeys, pressedGenKeys, releasedKeys, releasedGenKeys);
 
-            startGesture(pressedKeys, pressedGenKeys, brailleIODevice);
-            endGesture(releasedKeys, releasedGenKeys, pressedKeys, pressedGenKeys, brailleIODevice);
+            kbi = new BrailleIO.Structs.KeyCombinationItem(
+                pressedKeys, releasedKeys,
+                pressedKbKeys, releasedKbKeys,
+                pressedAddKeys, releasedAddKeys
+                );
 
+            if (kbi.AreButtonsPressed() || (pressedGenKeys != null && pressedGenKeys.Count > 0))
+                fireButtonPressedEvent(brailleIODevice, pressedKeys, pressedKbKeys, pressedAddKeys, pressedGenKeys);
+            if (kbi.AreButtonsReleased() || (releasedGenKeys != null && releasedGenKeys.Count > 0))
+                fireButtonReleasedEvent(brailleIODevice, pressedKeys, pressedKbKeys, pressedAddKeys, pressedGenKeys, 
+                    releasedKeys, releasedKbKeys, releasedAddKeys, releasedGenKeys);
+
+            startGesture(pressedKeys, pressedKbKeys, pressedAddKeys, pressedGenKeys, brailleIODevice);
+            endGesture(
+                brailleIODevice,
+                kbi,
+                //releasedKeys, releasedKbKeys, releasedAddKeys, 
+                pressedGenKeys, 
+                releasedGenKeys 
+                //pressedKeys, pressedKbKeys, pressedAddKeys, 
+                );
+
+        }
+
+        private void handleButtonCombinationEvent(object sender, BrailleIODevice device,
+            BrailleIO_KeyCombinationReleased_EventArgs brailleIO_KeyStateChanged_EventArgs)
+        {
+            if (brailleIO_KeyStateChanged_EventArgs != null)
+            {
+                var combination = brailleIO_KeyStateChanged_EventArgs.KeyCombination;
+
+                // ATTENTION: those proprietary buttons are not interpretable by this event
+                List<String> pressedGenKeys = new List<String>();
+                List<String> releasedGenKeys = new List<String>();
+
+                var mediator = BrailleIOButtonMediatorFactory.GetMediator(sender as BrailleIO.Interface.IBrailleIOAdapter);
+                if (mediator != null)
+                {
+                    //pressedGenKeys = mediator.GetAllPressedGenericButtons(brailleIO_KeyStateChanged_EventArgs);
+                    combination.PressedGeneralKeys = mediator.GetAllPressedGeneralButtons(combination.PressedGeneralKeys);
+                    combination.PressedKeyboardKeys = mediator.GetAllPressedBrailleKeyboardButtons(combination.PressedKeyboardKeys);
+                    combination.PressedAdditionalKeys = mediator.GetAllPressedAdditionalButtons(combination.PressedAdditionalKeys);
+
+                    //releasedGenKeys = mediator.GetAllReleasedGenericButtons(brailleIO_KeyStateChanged_EventArgs);
+                    combination.PressedGeneralKeys = mediator.GetAllReleasedGeneralButtons(combination.PressedGeneralKeys);
+                    combination.ReleasedKeyboardKeys = mediator.GetAllReleasedBrailleKeyboardButtons(combination.ReleasedKeyboardKeys);
+                    combination.ReleasedAdditionalKeys = mediator.GetAllReleasedAdditionalButtons(combination.ReleasedAdditionalKeys);
+
+                }
+
+                // check for function mapping
+                if(ButtoncombinationMapper != null)
+                {
+                    List<string> func = ButtoncombinationMapper.GetFunctionMapping(device, combination.ReleasedButtonsToString());
+
+                    if (func != null && func.Count > 0)
+                    {
+                        bool cancel = false;
+                        // fire event
+                        foreach (var item in func)
+                        {
+                            bool handled = fireFunctionCall(item, device, combination, pressedGenKeys, releasedGenKeys, out cancel);
+                            if (handled) return;
+                        }
+
+                    }
+                }
+
+                // End gesture call?
+                fireButtonCombinationReleasedEvent(device, combination,pressedGenKeys, releasedGenKeys);
+            }   
         }
 
         #endregion
 
-        #region Event handlers
+        #region Adapter Event handlers
 
         private void registerForEvents(IBrailleIOAdapter adapter)
         {
@@ -409,7 +521,7 @@ namespace tud.mci.tangram.TangramLector
 
                 if (adapter is IBrailleIOAdapter2)
                 {
-                    ((IBrailleIOAdapter2)adapter).keyCombinationReleased += InteractionManager_keyCombinationReleased;
+                    ((IBrailleIOAdapter2)adapter).keyCombinationReleased += adapter_keyCombinationReleased;
                 }
             
             }
@@ -430,7 +542,7 @@ namespace tud.mci.tangram.TangramLector
 
                 if (adapter is IBrailleIOAdapter2)
                 {
-                    ((IBrailleIOAdapter2)adapter).keyCombinationReleased -= InteractionManager_keyCombinationReleased;
+                    ((IBrailleIOAdapter2)adapter).keyCombinationReleased -= adapter_keyCombinationReleased;
                 }            
             }
             catch (Exception)
@@ -482,70 +594,136 @@ namespace tud.mci.tangram.TangramLector
         {
             enqueueInteractionQueueItem(InteractionQueueObjectType.Error, e, sender);
         }
-        void InteractionManager_ButtonReleased(object sender, ButtonReleasedEventArgs e)
+        void adapter_keyCombinationReleased(object sender, BrailleIO_KeyCombinationReleased_EventArgs e)
         {
-            if (e != null)
-            {
-                checkForKeyCombination(e.Device, e.PressedGeneralKeys, e.PressedGenericKeys, e.ReleasedGeneralKeys, e.ReleasedGenericKeys);
-            }
+            enqueueInteractionQueueItem(InteractionQueueObjectType.ButtonCombination, e, sender);
         }
 
-        void InteractionManager_keyCombinationReleased(object sender, BrailleIO_KeyCombinationReleased_EventArgs e)
-        {
-            // TODO: handle this
-        }
+        //void InteractionManager_ButtonReleased(object sender, ButtonReleasedEventArgs e)
+        //{
+        //    // stop this handling here and use the generic handling by Braille IO
+        //    // FIXME: 
+        //    //return;
+        //    //if (e != null)
+        //    //{
+        //    //    checkForKeyCombination(e.Device, e.PressedGeneralKeys, e.PressedGenericKeys, e.ReleasedGeneralKeys, e.ReleasedGenericKeys);
+        //    //}
+        //}
 
         #endregion
 
-        #region fire events
+        #region Fire Events
 
         /// <summary>
         /// Fires the button released event.
         /// </summary>
         /// <param name="device">The device.</param>
-        /// <param name="pressedGeneralKeys">The pressed general keys.</param>
-        /// <param name="pressedGenericKeys">The pressed generic keys.</param>
-        /// <param name="releasedGeneralKeys">The released general keys.</param>
-        /// <param name="releasedGenericKeys">The released generic keys.</param>
-        /// <returns></returns>
-        protected bool fireButtonReleasedEvent(BrailleIO.BrailleIODevice device, List<BrailleIO_DeviceButton> pressedGeneralKeys, List<String> pressedGenericKeys, List<BrailleIO_DeviceButton> releasedGeneralKeys, List<String> releasedGenericKeys)
+        /// <param name="pressedGeneralKeys">The pressed general keys (Flag).</param>
+        /// <param name="pressedBrailleKeyboardKeys">The pressed braille keyboard keys (Flag).</param>
+        /// <param name="pressedAdditionalKeys">An array of pressed additional keys (Flag).</param>
+        /// <param name="pressedGenericKeys">The interpreted pressed generic keys (proprietary).</param>
+        /// <param name="releasedGeneralKeys">The released general keys (Flag).</param>
+        /// <param name="releasedBrailleKeyboardKeys">The released braille keyboard keys (Flag).</param>
+        /// <param name="releasedAdditionalKeys">An array of released additional keys (Flag).</param>
+        /// <param name="releasedGenericKeys">The interpreted released generic keys (proprietary).</param>
+        /// <returns>
+        ///   <c>true</c> if the handling was canceled by an EventHanlder, <c>false</c> otherwise.</returns>
+        protected bool fireButtonReleasedEvent(
+            BrailleIO.BrailleIODevice device,
+            BrailleIO_DeviceButton pressedGeneralKeys,
+            BrailleIO_BrailleKeyboardButton pressedBrailleKeyboardKeys,
+            BrailleIO_AdditionalButton[] pressedAdditionalKeys,
+            List<String> pressedGenericKeys,
+            BrailleIO_DeviceButton releasedGeneralKeys,
+            BrailleIO_BrailleKeyboardButton releasedBrailleKeyboardKeys,
+            BrailleIO_AdditionalButton[] releasedAdditionalKeys,
+            List<String> releasedGenericKeys)
         {
-            var args = new ButtonReleasedEventArgs(device, pressedGeneralKeys, pressedGenericKeys, releasedGeneralKeys, releasedGenericKeys);
-            Logger.Instance.Log(LogPriority.OFTEN, this, "Button released: " + String.Join(",", args.ReleasedGenericKeys) + " pressed: " + String.Join(",", args.PressedGenericKeys));
+            var args = new ButtonReleasedEventArgs(device, 
+                pressedGeneralKeys, pressedBrailleKeyboardKeys, pressedAdditionalKeys, pressedGenericKeys, 
+                releasedGeneralKeys, releasedBrailleKeyboardKeys, releasedAdditionalKeys, releasedGenericKeys);
+            Logger.Instance.Log(LogPriority.OFTEN, this, "Button released: " + args.ToString());
             bool cancel = base.fireButtonReleasedEvent(args);
             if (cancel) { System.Diagnostics.Debug.WriteLine("InteractionManager Event canceled"); }
             return cancel;
         }
 
-        /// <summary>
-        /// Fires the button combination released event.
-        /// </summary>
+        /// <summary>Fires the button combination released event.</summary>
         /// <param name="device">The device.</param>
-        /// <param name="pressedGeneralKeys">The pressed general keys.</param>
-        /// <param name="pressedGenericKeys">The pressed generic keys.</param>
-        /// <param name="releasedGeneralKeys">The released general keys.</param>
-        /// <param name="releasedGenericKeys">The released generic keys.</param>
-        /// <returns></returns>
-        protected bool fireButtonCombinationReleasedEvent(BrailleIO.BrailleIODevice device, List<BrailleIO_DeviceButton> pressedGeneralKeys, List<String> pressedGenericKeys, List<BrailleIO_DeviceButton> releasedGeneralKeys, List<String> releasedGenericKeys)
+        /// <param name="pressedGeneralKeys">The pressed general keys (Flag).</param>
+        /// <param name="pressedBrailleKeyboardKeys">The pressed braille keyboard keys (Flag).</param>
+        /// <param name="pressedAdditionalKeys">An array of pressed additional keys (Flag).</param>
+        /// <param name="pressedGenericKeys">The interpreted pressed generic keys (proprietary).</param>
+        /// <param name="releasedGeneralKeys">The released general keys (Flag).</param>
+        /// <param name="releasedBrailleKeyboardKeys">The released braille keyboard keys (Flag).</param>
+        /// <param name="releasedAdditionalKeys">An array of released additional keys (Flag).</param>
+        /// <param name="releasedGenericKeys">The interpreted released generic keys (proprietary).</param>
+        /// <returns>
+        ///   <c>true</c> if the handling was canceled by an EventHanlder, <c>false</c> otherwise.</returns>
+        protected bool fireButtonCombinationReleasedEvent(BrailleIO.BrailleIODevice device,
+            BrailleIO.Structs.KeyCombinationItem combinationItem,
+            List<String> pressedGenericKeys,
+            List<String> releasedGenericKeys)
         {
-            var args = new ButtonReleasedEventArgs(device, pressedGeneralKeys, pressedGenericKeys, releasedGeneralKeys, releasedGenericKeys);
-            Logger.Instance.Log(LogPriority.OFTEN, this, "Button combination released: " + String.Join(",", args.ReleasedGenericKeys) + " pressed: " + String.Join(",", args.PressedGenericKeys));
+            var args = new ButtonReleasedEventArgs(device,
+                combinationItem.PressedGeneralKeys, combinationItem.PressedKeyboardKeys, combinationItem.PressedAdditionalKeys, pressedGenericKeys,
+                combinationItem.ReleasedGeneralKeys, combinationItem.ReleasedKeyboardKeys, combinationItem.ReleasedAdditionalKeys, releasedGenericKeys);
+            Logger.Instance.Log(LogPriority.OFTEN, this, "Button combination released: " + args.ToString());
+
+            args.ReleasedButtonsToString();
+
             bool cancel = base.fireButtonCombinationReleasedEvent(args);
             if (cancel) { System.Diagnostics.Debug.WriteLine("InteractionManager Event canceled"); }
             return cancel;
         }
 
+
+        /// <summary>Fires the function call.</summary>
+        /// <param name="functionName">Name of the function.</param>
+        /// <param name="device">The device.</param>
+        /// <param name="keyCombination">The key combination.</param>
+        /// <param name="pressedGenericKeys">The pressed generic keys.</param>
+        /// <param name="releasedGenericKeys">The released generic keys.</param>
+        /// <param name="canceled">if set to <c>true</c> the further forwarding of the event was canceled by one event handler.</param>
+        /// <returns>
+        ///   <c>true</c> if the function/event was handled by (at least) one event handler, <c>false</c> otherwise.</returns>
+        protected bool fireFunctionCall(
+            string functionName,
+            BrailleIO.BrailleIODevice device,
+            BrailleIO.Structs.KeyCombinationItem keyCombination,
+            List<String> pressedGenericKeys,
+            List<String> releasedGenericKeys,
+            out bool canceled)
+        {
+            canceled = false;
+            bool handled = false;
+            Logger.Instance.Log(LogPriority.OFTEN, this, "Function call: " + functionName);
+            handled = base.fireFunctionCalledEvent(functionName, device, keyCombination, pressedGenericKeys, releasedGenericKeys, out canceled);
+            if (canceled) { System.Diagnostics.Debug.WriteLine("InteractionManager Event canceled"); }
+            if (handled) { System.Diagnostics.Debug.WriteLine("InteractionManager function Event handled"); }
+            return handled;
+        }
+
+
         /// <summary>
         /// Fires the button pressed event.
         /// </summary>
         /// <param name="device">The device.</param>
-        /// <param name="pressedGeneralKeys">The pressed general keys.</param>
-        /// <param name="pressedGenericKeys">The pressed generic keys.</param>
-        /// <returns></returns>
-        protected bool fireButtonPressedEvent(BrailleIO.BrailleIODevice device, List<BrailleIO_DeviceButton> pressedGeneralKeys, List<String> pressedGenericKeys)
+        /// <param name="pressedGeneralKeys">The pressed general keys (Flag).</param>
+        /// <param name="pressedBrailleKeyboardKeys">The pressed braille keyboard keys (Flag).</param>
+        /// <param name="pressedAdditionalKeys">An array of pressed additional keys (Flag).</param>
+        /// <param name="pressedGenericKeys">The interpreted pressed generic keys (proprietary).</param>
+        /// <returns>
+        ///   <c>true</c> if the handling was canceled by an EventHanlder, <c>false</c> otherwise.</returns>
+        protected bool fireButtonPressedEvent(
+            BrailleIO.BrailleIODevice device,
+            BrailleIO_DeviceButton pressedGeneralKeys,
+            BrailleIO_BrailleKeyboardButton pressedBrailleKeyboardKeys,
+            BrailleIO_AdditionalButton[] pressedAdditionalKeys,
+            List<String> pressedGenericKeys)
         {
-            var args = new ButtonPressedEventArgs(device, pressedGeneralKeys, pressedGenericKeys);
-            Logger.Instance.Log(LogPriority.OFTEN, this, "Button pressed: " + String.Join(",", args.PressedGenericKeys));
+            var args = new ButtonPressedEventArgs(device, pressedGeneralKeys, pressedBrailleKeyboardKeys, pressedAdditionalKeys,  pressedGenericKeys);
+            Logger.Instance.Log(LogPriority.OFTEN, this, "Button pressed: " + args.ToString());
             bool cancel = base.fireButtonPressedEvent(args);
             if (cancel) { System.Diagnostics.Debug.WriteLine("InteractionManager Event canceled"); }
             return cancel;
@@ -555,15 +733,33 @@ namespace tud.mci.tangram.TangramLector
         /// Fires the gesture event.
         /// </summary>
         /// <param name="device">The device.</param>
-        /// <param name="releasedGeneralKeys">The released general keys.</param>
-        /// <param name="releasedGenericKeys">The released generic keys.</param>
-        /// <param name="pressedGeneralKeys">The pressed general keys.</param>
-        /// <param name="pressedGenericKeys">The pressed generic keys.</param>
+        /// <param name="pressedGeneralKeys">The pressed general keys (Flag).</param>
+        /// <param name="pressedBrailleKeyboardKeys">The pressed braille keyboard keys (Flag).</param>
+        /// <param name="pressedAdditionalKeys">An array of pressed additional keys (Flag).</param>
+        /// <param name="pressedGenericKeys">The interpreted pressed generic keys (proprietary).</param>
+        /// <param name="releasedGeneralKeys">The released general keys (Flag).</param>
+        /// <param name="releasedBrailleKeyboardKeys">The released braille keyboard keys (Flag).</param>
+        /// <param name="releasedAdditionalKeys">An array of released additional keys (Flag).</param>
+        /// <param name="releasedGenericKeys">The interpreted released generic keys (proprietary).</param>
         /// <param name="gesture">The gesture.</param>
-        /// <returns></returns>
-        protected bool fireGestureEvent(BrailleIO.BrailleIODevice device, List<BrailleIO_DeviceButton> releasedGeneralKeys, List<String> releasedGenericKeys, List<BrailleIO_DeviceButton> pressedGeneralKeys, List<String> pressedGenericKeys, Gestures.Recognition.Interfaces.IClassificationResult gesture)
+        /// <returns>
+        ///   <c>true</c> if the handling was canceled by an EventHanlder, <c>false</c> otherwise.</returns>
+        protected bool fireGestureEvent(
+            BrailleIO.BrailleIODevice device,
+            BrailleIO_DeviceButton pressedGeneralKeys,
+            BrailleIO_BrailleKeyboardButton pressedBrailleKeyboardKeys,
+            BrailleIO_AdditionalButton[] pressedAdditionalKeys,
+            List<String> pressedGenericKeys,
+            BrailleIO_DeviceButton releasedGeneralKeys,
+            BrailleIO_BrailleKeyboardButton releasedBrailleKeyboardKeys,
+            BrailleIO_AdditionalButton[] releasedAdditionalKeys,
+            List<String> releasedGenericKeys, 
+            Gestures.Recognition.Interfaces.IClassificationResult gesture)
         {
-            var args = new GestureEventArgs(device, pressedGeneralKeys, pressedGenericKeys, releasedGeneralKeys, releasedGenericKeys, gesture);
+            var args = new GestureEventArgs(device, 
+                pressedGeneralKeys, pressedBrailleKeyboardKeys, pressedAdditionalKeys, pressedGenericKeys, 
+                releasedGeneralKeys, releasedBrailleKeyboardKeys, releasedAdditionalKeys, releasedGenericKeys, 
+                gesture);
             Logger.Instance.Log(LogPriority.OFTEN, this, "Gesture performed: " + args.Gesture.ToString());
             bool cancel = base.fireGestureEvent(args);
             if (cancel) { System.Diagnostics.Debug.WriteLine("InteractionManager Event canceled"); }
@@ -588,156 +784,158 @@ namespace tud.mci.tangram.TangramLector
                 {
                     InteractionModeChanged.Invoke(this, new InteractionModeChangedEventArgs(oldValue, newValue));
                 }
-                catch (Exception)
-                {
-                }
+                catch (Exception){}
             }
         }
 
         #endregion
 
-        #region Key Combination Interpreter
+        //#region Key Combination Interpreter
 
-        Dictionary<BrailleIODevice, System.Timers.Timer> _keyCombinationTimerList = new Dictionary<BrailleIODevice, System.Timers.Timer>();
-        Dictionary<System.Timers.Timer, KeyCombinationItem> _keyCombinationTimerButtonList = new Dictionary<System.Timers.Timer, KeyCombinationItem>();
+        //Dictionary<BrailleIODevice, System.Timers.Timer> _keyCombinationTimerList = new Dictionary<BrailleIODevice, System.Timers.Timer>();
+        //Dictionary<System.Timers.Timer, KeyCombinationItem> _keyCombinationTimerButtonList = new Dictionary<System.Timers.Timer, KeyCombinationItem>();
 
-        readonly object _timerListLock = new object();
-        readonly object _timerListButtonsLock = new object();
+        //readonly object _timerListLock = new object();
+        //readonly object _timerListButtonsLock = new object();
 
-        private const double _keyCombinationTimerInterval = 500;
+        //private const double _keyCombinationTimerInterval = 500;
 
-        Dictionary<BrailleIODevice, System.Timers.Timer> keyCombinationTimerList
-        {
-            get
-            {
-                lock (_timerListLock)
-                {
-                    return _keyCombinationTimerList;
-                }
-            }
-            set
-            {
-                lock (_timerListLock)
-                {
-                    _keyCombinationTimerList = value;
-                }
-            }
-        }
-        Dictionary<System.Timers.Timer, KeyCombinationItem> keyCombinationTimerButtonList
-        {
-            get
-            {
-                lock (_timerListButtonsLock)
-                {
-                    return _keyCombinationTimerButtonList;
-                }
-            }
-            set
-            {
-                lock (_timerListButtonsLock)
-                {
-                    _keyCombinationTimerButtonList = value;
-                }
-            }
-        }
+        //Dictionary<BrailleIODevice, System.Timers.Timer> keyCombinationTimerList
+        //{
+        //    get
+        //    {
+        //        lock (_timerListLock)
+        //        {
+        //            return _keyCombinationTimerList;
+        //        }
+        //    }
+        //    set
+        //    {
+        //        lock (_timerListLock)
+        //        {
+        //            _keyCombinationTimerList = value;
+        //        }
+        //    }
+        //}
+        //Dictionary<System.Timers.Timer, KeyCombinationItem> keyCombinationTimerButtonList
+        //{
+        //    get
+        //    {
+        //        lock (_timerListButtonsLock)
+        //        {
+        //            return _keyCombinationTimerButtonList;
+        //        }
+        //    }
+        //    set
+        //    {
+        //        lock (_timerListButtonsLock)
+        //        {
+        //            _keyCombinationTimerButtonList = value;
+        //        }
+        //    }
+        //}
 
-        private void checkForKeyCombination(BrailleIODevice device, List<BrailleIO_DeviceButton> pressedGeneralKeys, List<String> pressedGenericKeys, List<BrailleIO_DeviceButton> releaesedGeneralKeys, List<String> releasedGenericKeys)
-        {
-            if (keyCombinationTimerList.ContainsKey(device))
-            {
-                System.Timers.Timer t = keyCombinationTimerList[device];
-                t.Stop();
+        //private void checkForKeyCombination(BrailleIODevice device,
+        //    List<BrailleIO_DeviceButton> pressedGeneralKeys,
+        //    List<String> pressedGenericKeys,
+        //    List<BrailleIO_DeviceButton> releaesedGeneralKeys,
+        //    List<String> releasedGenericKeys)
+        //{
+        //    if (keyCombinationTimerList.ContainsKey(device))
+        //    {
+        //        System.Timers.Timer t = keyCombinationTimerList[device];
+        //        t.Stop();
 
-                List<String> pGenButtonList = new List<String>();
-                List<String> rGenButtonList = new List<String>();
+        //        List<String> pGenButtonList = new List<String>();
+        //        List<String> rGenButtonList = new List<String>();
 
-                List<BrailleIO_DeviceButton> pGButtonList = new List<BrailleIO_DeviceButton>();
-                List<BrailleIO_DeviceButton> rGButtonList = new List<BrailleIO_DeviceButton>();
+        //        List<BrailleIO_DeviceButton> pGButtonList = new List<BrailleIO_DeviceButton>();
+        //        List<BrailleIO_DeviceButton> rGButtonList = new List<BrailleIO_DeviceButton>();
 
-                KeyCombinationItem kc;
+        //        KeyCombinationItem kc;
 
-                if (keyCombinationTimerButtonList.TryGetValue(t, out kc))
-                {
-                    pGenButtonList = kc.PressedGenericKeys;
-                    pGButtonList = kc.PressedGeneralKeys;
-                    rGenButtonList = kc.ReleasedGenericKeys;
-                    rGButtonList = kc.ReleasedGeneralKeys;
-                }
-                else
-                {
-                    kc = new KeyCombinationItem(pGButtonList, pGenButtonList, rGButtonList, rGenButtonList);
-                }
-                List<String> nrbl = rGenButtonList.Union(releasedGenericKeys).ToList();
-                List<BrailleIO_DeviceButton> nrgbl = rGButtonList.Union(releaesedGeneralKeys).ToList();
+        //        if (keyCombinationTimerButtonList.TryGetValue(t, out kc))
+        //        {
+        //            pGenButtonList = kc.PressedGenericKeys;
+        //            pGButtonList = kc.PressedGeneralKeys;
+        //            rGenButtonList = kc.ReleasedGenericKeys;
+        //            rGButtonList = kc.ReleasedGeneralKeys;
+        //        }
+        //        else
+        //        {
+        //            kc = new KeyCombinationItem(pGButtonList, pGenButtonList, rGButtonList, rGenButtonList);
+        //        }
+        //        List<String> nrbl = rGenButtonList.Union(releasedGenericKeys).ToList();
+        //        List<BrailleIO_DeviceButton> nrgbl = rGButtonList.Union(releaesedGeneralKeys).ToList();
 
-                kc.PressedGenericKeys = pressedGenericKeys;
-                kc.PressedGeneralKeys = pressedGeneralKeys;
-                kc.ReleasedGenericKeys = nrbl;
-                kc.ReleasedGeneralKeys = nrgbl;
+        //        kc.PressedGenericKeys = pressedGenericKeys;
+        //        kc.PressedGeneralKeys = pressedGeneralKeys;
+        //        kc.ReleasedGenericKeys = nrbl;
+        //        kc.ReleasedGeneralKeys = nrgbl;
 
-                //System.Diagnostics.Debug.WriteLine("\t\t\tnew list: '" + String.Join(", ", nbl) + "'");
-                if (keyCombinationTimerButtonList.ContainsKey(t))
-                {
-                    keyCombinationTimerButtonList[t] = kc;
-                }
-                else
-                {
-                    keyCombinationTimerButtonList.Add(t, kc);
-                }
+        //        //System.Diagnostics.Debug.WriteLine("\t\t\tnew list: '" + String.Join(", ", nbl) + "'");
+        //        if (keyCombinationTimerButtonList.ContainsKey(t))
+        //        {
+        //            keyCombinationTimerButtonList[t] = kc;
+        //        }
+        //        else
+        //        {
+        //            keyCombinationTimerButtonList.Add(t, kc);
+        //        }
 
-                if (pressedGenericKeys.Count < 1)
-                {
-                    t_Elapsed(t, null);
-                }
-                else
-                {
-                    t.Start();
-                }
-            }
-            else
-            {
-                System.Timers.Timer t = new System.Timers.Timer(_keyCombinationTimerInterval);
-                keyCombinationTimerList.Add(device, t);
-                keyCombinationTimerButtonList.Add(t, new KeyCombinationItem(pressedGeneralKeys, pressedGenericKeys, releaesedGeneralKeys, releasedGenericKeys));
-                if (pressedGenericKeys.Count < 1)
-                {
-                    t_Elapsed(t, null);
-                }
-                else
-                {
-                    t.Elapsed += new ElapsedEventHandler(t_Elapsed);
-                    t.Start();
-                }
-            }
-        }
+        //        if (pressedGenericKeys.Count < 1)
+        //        {
+        //            t_Elapsed(t, null);
+        //        }
+        //        else
+        //        {
+        //            t.Start();
+        //        }
+        //    }
+        //    else
+        //    {
+        //        System.Timers.Timer t = new System.Timers.Timer(_keyCombinationTimerInterval);
+        //        keyCombinationTimerList.Add(device, t);
+        //        keyCombinationTimerButtonList.Add(t, new KeyCombinationItem(pressedGeneralKeys, pressedGenericKeys, releaesedGeneralKeys, releasedGenericKeys));
+        //        if (pressedGenericKeys.Count < 1)
+        //        {
+        //            t_Elapsed(t, null);
+        //        }
+        //        else
+        //        {
+        //            t.Elapsed += new ElapsedEventHandler(t_Elapsed);
+        //            t.Start();
+        //        }
+        //    }
+        //}
 
-        void t_Elapsed(object sender, ElapsedEventArgs e)
-        {
-            System.Timers.Timer t = sender as System.Timers.Timer;
-            if (t != null)
-            {
-                t.Stop();
-                KeyCombinationItem kc;
-                //try get the keys
-                if (keyCombinationTimerButtonList.TryGetValue(t, out kc))
-                {
-                    keyCombinationTimerButtonList.Remove(t);
+        //void t_Elapsed(object sender, ElapsedEventArgs e)
+        //{
+        //    System.Timers.Timer t = sender as System.Timers.Timer;
+        //    if (t != null)
+        //    {
+        //        t.Stop();
+        //        KeyCombinationItem kc;
+        //        //try get the keys
+        //        if (keyCombinationTimerButtonList.TryGetValue(t, out kc))
+        //        {
+        //            keyCombinationTimerButtonList.Remove(t);
 
-                    var device = keyCombinationTimerList.FirstOrDefault(x => x.Value == t).Key;
-                    if (device != null)
-                    {
-                        keyCombinationTimerList.Remove(device);
-                    }
+        //            var device = keyCombinationTimerList.FirstOrDefault(x => x.Value == t).Key;
+        //            if (device != null)
+        //            {
+        //                keyCombinationTimerList.Remove(device);
+        //            }
 
-                    if (kc.ReleasedGenericKeys != null && kc.ReleasedGenericKeys.Count > 0)
-                    {
-                        fireButtonCombinationReleasedEvent(device, kc.PressedGeneralKeys, kc.PressedGenericKeys, kc.ReleasedGeneralKeys, kc.ReleasedGenericKeys);
-                    }
-                }
-            }
-        }
+        //            if (kc.ReleasedGenericKeys != null && kc.ReleasedGenericKeys.Count > 0)
+        //            {
+        //                // fireButtonCombinationReleasedEvent(device, kc.PressedGeneralKeys, kc.PressedGenericKeys, kc.ReleasedGeneralKeys, kc.ReleasedGenericKeys);
+        //            }
+        //        }
+        //    }
+        //}
 
-        #endregion
+        //#endregion
 
         #region Gesture Interpreter
 
@@ -816,40 +1014,114 @@ namespace tud.mci.tangram.TangramLector
 
         readonly ConcurrentBag<BrailleIODevice> gesturingDevices = new ConcurrentBag<BrailleIODevice>();
 
-        private void startGesture(List<BrailleIO_DeviceButton> pressedKeys, List<String> pressedGenKeys, BrailleIODevice device)
+        private void startGesture(
+            BrailleIO_DeviceButton pressedKeys,
+            BrailleIO_BrailleKeyboardButton pressedBrailleKeyboardKeys,
+            BrailleIO_AdditionalButton[] pressedAdditionalKeys,
+            List<String> pressedGenKeys, 
+            BrailleIODevice device)
         {
-            if (pressedKeys != null && pressedGenKeys.Count < 2
-                && (pressedGenKeys.Contains("hbr") || pressedKeys.Contains(BrailleIO_DeviceButton.Gesture)))
+
+            if(device != null)
             {
-                //start gesture recording
-                ITrackBlobs blobTracker;
-                blobTrackers.TryGetValue(device, out blobTracker);
-                IRecognizeGestures gestureRecognizer;
-                gestureRecognizers.TryGetValue(device, out gestureRecognizer);
+                BrailleIO.Structs.KeyCombinationItem kbi = new BrailleIO.Structs.KeyCombinationItem(
+                    pressedKeys, BrailleIO_DeviceButton.None,
+                    pressedBrailleKeyboardKeys, BrailleIO_BrailleKeyboardButton.None,
+                    pressedAdditionalKeys, null
+                    );
 
-                if (blobTracker != null && gestureRecognizer != null)
+                if (kbi.AreButtonsPressed())
                 {
-                    if (pressedKeys.Contains(BrailleIO_DeviceButton.Gesture))
+                    string combination = kbi.PressedButtonsToString();
+                    List<string> function = this.ButtoncombinationMapper.GetFunctionMapping(device, combination);
+
+                    int gestOrMan = 0;
+
+                    if (function != null && function.Count > 0)
                     {
-                        Mode |= InteractionMode.Gesture;
-                    }
-                    else if (pressedGenKeys.Contains("hbr")) // manipulation
-                    {
-                        Mode |= InteractionMode.Manipulation;
-                    }
-                    else
-                    {
-                        return;
+                        if (function.Contains("Gesture")) gestOrMan = -1;
+                        if (function.Contains("Manipulation")) gestOrMan = 1;
                     }
 
-                    if (!gesturingDevices.Contains(device)) gesturingDevices.Add(device);
-                    startGestureTracking(blobTracker, gestureRecognizer);
-                }
-                else
-                {
-                    initalizeGestureRecognition(device);
+                    if (gestOrMan != 0) // gesture button is released
+                    {
+                        //start gesture recording
+                        ITrackBlobs blobTracker;
+                        blobTrackers.TryGetValue(device, out blobTracker);
+                        IRecognizeGestures gestureRecognizer;
+                        gestureRecognizers.TryGetValue(device, out gestureRecognizer);
+
+                        if (blobTracker != null && gestureRecognizer != null)
+                        {
+                            if (gestOrMan < 0)
+                            {
+                                Mode |= InteractionMode.Gesture;
+                            }
+                            // FIXME: make this run without the proprietary key IDs for BrailleDis devices
+                            else // manipulation
+                            {
+                                Mode |= InteractionMode.Manipulation;
+                            }
+
+                            if (!gesturingDevices.Contains(device)) gesturingDevices.Add(device);
+                            startGestureTracking(blobTracker, gestureRecognizer);
+                        }
+                        else
+                        {
+                            initalizeGestureRecognition(device);
+                        }
+                    }
                 }
             }
+
+            //// left and right gesture buttons !!!!
+            //if (pressedGenKeys.Contains("hbr") || pressedKeys.HasFlag(BrailleIO_DeviceButton.Gesture))
+            //{
+            //    // check if additional buttons are pressed?
+            //    if (pressedBrailleKeyboardKeys != BrailleIO_BrailleKeyboardButton.None || 
+            //        pressedBrailleKeyboardKeys != BrailleIO_BrailleKeyboardButton.Unknown)
+            //        return;
+            //    if (pressedAdditionalKeys != null && pressedAdditionalKeys.Length > 0)
+            //    {
+            //        foreach (var item in pressedAdditionalKeys)
+            //            if (item != BrailleIO_AdditionalButton.None || 
+            //                item != BrailleIO_AdditionalButton.Unknown)
+            //                return;
+            //    }
+
+            //    //start gesture recording
+            //    ITrackBlobs blobTracker;
+            //    blobTrackers.TryGetValue(device, out blobTracker);
+            //    IRecognizeGestures gestureRecognizer;
+            //    gestureRecognizers.TryGetValue(device, out gestureRecognizer);
+
+            //    // TODO: ask for function name !!!!!
+
+
+            //    if (blobTracker != null && gestureRecognizer != null)
+            //    {
+            //        if (pressedKeys.HasFlag(BrailleIO_DeviceButton.Gesture))
+            //        {
+            //            Mode |= InteractionMode.Gesture;
+            //        }
+            //        // FIXME: make this run without the proprietary key IDs for BrailleDis devices
+            //        else if (pressedGenKeys.Contains("hbr")) // manipulation
+            //        {
+            //            Mode |= InteractionMode.Manipulation;
+            //        }
+            //        else
+            //        {
+            //            return;
+            //        }
+
+            //        if (!gesturingDevices.Contains(device)) gesturingDevices.Add(device);
+            //        startGestureTracking(blobTracker, gestureRecognizer);
+            //    }
+            //    else
+            //    {
+            //        initalizeGestureRecognition(device);
+            //    }
+            //}
         }
 
         private void startGestureTracking(ITrackBlobs blobTracker, IRecognizeGestures gestureRecognizer)
@@ -861,40 +1133,120 @@ namespace tud.mci.tangram.TangramLector
             }
         }
 
-        private void endGesture(List<BrailleIO_DeviceButton> releasedKeys, List<String> releasedGenKeys, List<BrailleIO_DeviceButton> pressedKeys, List<String> pressedGenKeys, BrailleIODevice device)
+        private void endGesture(
+            //            BrailleIO_DeviceButton releasedKeys,
+            //BrailleIO_BrailleKeyboardButton releasedBrailleKeyboardKeys,
+            //BrailleIO_AdditionalButton[] releasedAdditionalKeys,
+            //            BrailleIO_DeviceButton pressedKeys,
+            //BrailleIO_BrailleKeyboardButton pressedBrailleKeyboardKeys,
+            //BrailleIO_AdditionalButton[] pressedAdditionalKeys,
+            BrailleIODevice device,
+            BrailleIO.Structs.KeyCombinationItem kbi,
+            List<String> pressedGenKeys, 
+            List<String> releasedGenKeys)
         {
-            if ((Mode & InteractionMode.Gesture) == InteractionMode.Gesture
-                && releasedKeys.Contains(BrailleIO_DeviceButton.Gesture)
-                && releasedGenKeys.Count == 1 && pressedGenKeys.Count == 0)
-            {
-                Mode &= ~InteractionMode.Gesture;
-            }
-            else if ((Mode & InteractionMode.Manipulation) == InteractionMode.Manipulation
-                && releasedGenKeys.Contains("hbr")
-                )
-            {
-                Mode &= ~InteractionMode.Manipulation;
-            }
-            else { return; }
+            // TODO: ask for function name !!!!!
+            // FIXME: make this run without the proprietary key IDs for BrailleDis devices
 
-            if (gesturingDevices.Contains(device))
-            {
-                BrailleIODevice trash = device;
-                int i = 0;
-                while (!gesturingDevices.TryTake(out trash) && i++ < 10) { Thread.Sleep(5); }
-            }
+            if (device != null && kbi.AreButtonsReleased()) {
 
-            IClassificationResult result = classifyGesture(device);
-            fireClassifiedGestureEvent(result, device, releasedKeys, releasedGenKeys, pressedKeys, pressedGenKeys);
+                string combination = kbi.ReleasedButtonsToString();
+                List<string> function = this.ButtoncombinationMapper.GetFunctionMapping(device, combination);
+
+                int gestOrMan = 0;
+
+                if(function != null && function.Count > 0)
+                {
+                    if (function.Contains("Gesture")) gestOrMan = -1;
+                    if (function.Contains("Manipulation")) gestOrMan = 1;
+                }
+
+                if (gestOrMan != 0) // gesture button is released
+                {
+                    if (!kbi.AreButtonsPressed()) // no other buttons are pressed
+                    {
+
+                        // FIXME: maybe release this state later (after handling the gesture)
+                        //if(Mode.HasFlag(InteractionMode.Gesture) && gestOrMan < 0)
+                        //{
+                        //    Mode &= ~InteractionMode.Gesture;
+                        //}
+                        //if(Mode.HasFlag(InteractionMode.Manipulation) && gestOrMan > 0)
+                        //{
+                        //    Mode &= ~InteractionMode.Manipulation;
+                        //}
+
+                        if (gesturingDevices.Contains(device))
+                        {
+                            BrailleIODevice trash = device;
+                            int i = 0;
+                            while (!gesturingDevices.TryTake(out trash) && i++ < 10) { Thread.Sleep(5); }
+
+                        }
+
+                        IClassificationResult result = classifyGesture(device);
+                        fireClassifiedGestureEvent(
+                            result, device,
+                            kbi.PressedGeneralKeys, kbi.PressedKeyboardKeys, kbi.PressedAdditionalKeys, pressedGenKeys,
+                            kbi.ReleasedGeneralKeys, kbi.ReleasedKeyboardKeys, kbi.ReleasedAdditionalKeys, releasedGenKeys);
+
+                        return;
+                    }
+                    else // other buttons are currently pressed 
+                    {   // --> so gesture button was pressed accidentally?
+                        // stop the gesture anyway
+                        if (gesturingDevices.Contains(device))
+                        {
+                            BrailleIODevice trash = device;
+                            int i = 0;
+                            while (!gesturingDevices.TryTake(out trash) && i++ < 10) { Thread.Sleep(5); }
+                            classifyGesture(trash); // stop evaluation
+                        }
+                    }
+                }
+
+
+            //    if (Mode.HasFlag(InteractionMode.Gesture)
+            //        //&& releasedKeys.HasFlag(BrailleIO_DeviceButton.Gesture)
+            //    //&& releasedGenKeys.Count == 1 && pressedGenKeys.Count == 0)
+            //    )
+            //{
+            //        Mode &= ~InteractionMode.Gesture;
+            //    }
+            //    else if ((Mode & InteractionMode.Manipulation) == InteractionMode.Manipulation
+            //        && releasedGenKeys.Contains("hbr")
+            //        )
+            //    {
+            //        Mode &= ~InteractionMode.Manipulation;
+            //    }
+            //    else { return; }
+
+
+
+
+
+                
+            }
         }
 
-        private void fireClassifiedGestureEvent(IClassificationResult result, BrailleIODevice device, List<BrailleIO_DeviceButton> releasedKeys, List<String> releasedGenKeys, List<BrailleIO_DeviceButton> pressedKeys, List<String> pressedGenKeys)
+        private void fireClassifiedGestureEvent(
+            IClassificationResult result, 
+            BrailleIODevice device,
+            BrailleIO_DeviceButton pressedGeneralKeys,
+            BrailleIO_BrailleKeyboardButton pressedBrailleKeyboardKeys,
+            BrailleIO_AdditionalButton[] pressedAdditionalKeys,
+            List<String> pressedGenericKeys,
+            BrailleIO_DeviceButton releasedGeneralKeys,
+            BrailleIO_BrailleKeyboardButton releasedBrailleKeyboardKeys,
+            BrailleIO_AdditionalButton[] releasedAdditionalKeys,
+            List<String> releasedGenericKeys)
         {
             if (result != null)
             {
                 System.Diagnostics.Debug.WriteLine("gesture recognized: " + result);
                 Logger.Instance.Log(LogPriority.DEBUG, this, "[GESTURE] result " + result);
-                fireGestureEvent(device, releasedKeys, releasedGenKeys, pressedKeys, pressedGenKeys, result);
+                fireGestureEvent(device, pressedGeneralKeys, pressedBrailleKeyboardKeys, pressedAdditionalKeys, pressedGenericKeys,
+                    releasedGeneralKeys, releasedBrailleKeyboardKeys, releasedAdditionalKeys, releasedGenericKeys, result);
             }
         }
 
@@ -911,6 +1263,8 @@ namespace tud.mci.tangram.TangramLector
             }
             return result;
         }
+
+
 
         private void handleTouchEvent(Object sender, BrailleIODevice brailleIODevice, BrailleIO_TouchValuesChanged_EventArgs brailleIO_TouchValuesChanged_EventArgs)
         {
@@ -1120,6 +1474,42 @@ namespace tud.mci.tangram.TangramLector
 
         #endregion
 
+        #region Key-combination to Function Mapping
+
+        /// <summary>
+        /// Adds the buttons to function mapping definition XML to the global definition dictionary.
+        /// </summary>
+        /// <param name="mappingDefXML">The mapping definition XML string.</param>
+        /// <returns><c>true</c> if the definitions are loaded correctly, <c>false</c> otherwise.</returns>
+        public bool AddButton2FunctionMapping(string mappingDefXML)
+        {
+            try
+            {
+                ButtoncombinationMapper.LoadFunctionMapping(mappingDefXML, true);
+            }
+            catch (Exception ex)
+            {
+                Logger.Instance.Log(LogPriority.ALWAYS, this, "[ERROR]\tcould not load button to function mapping definition.\r\n", ex);
+                return false;
+            }           
+            return true;
+        }
+
+        /// <summary>
+        /// Adds the buttons to function mapping definition XML to the global definition dictionary.
+        /// </summary>
+        /// <param name="mappingDefXML">The mapping definition XML file path.</param>
+        /// <returns><c>true</c> if the definitions are loaded correctly, <c>false</c> otherwise.</returns>
+        public bool AddButton2FunctionMappingFile(string mappingDefXMLFilePath)
+        {
+            if(mappingDefXMLFilePath != null && File.Exists(mappingDefXMLFilePath))
+            {
+                return AddButton2FunctionMapping(File.ReadAllText(mappingDefXMLFilePath));
+            }
+            return false;
+        }
+
+        #endregion
 
     }
 
@@ -1181,7 +1571,11 @@ namespace tud.mci.tangram.TangramLector
         /// <summary>
         /// an error has occurred
         /// </summary>
-        Error
+        Error,
+        /// <summary>
+        /// and button combination was released
+        /// </summary>
+        ButtonCombination
     }
 
     #endregion
@@ -1236,7 +1630,7 @@ namespace tud.mci.tangram.TangramLector
     struct KeyCombinationItem
     {
         /// <summary>
-        /// list of interpreted pressed keys
+        /// list of interpreted pressed keys 
         /// </summary>
         public List<String> PressedGenericKeys;
         /// <summary>
@@ -1333,8 +1727,7 @@ namespace tud.mci.tangram.TangramLector
             NewValue = newValue;
         }
     }
-
-
+    
     /// <summary>
     /// An struct for wrapping anonymous activations of new instances for gesture classifiers.
     /// </summary>
@@ -1380,6 +1773,14 @@ namespace tud.mci.tangram.TangramLector
             ClassType = _type;
             Params = _params;
             PostInitAct = action;
+        }
+    }
+
+    public class Button2FunctionProxy : AbstarctButton2FunctionProxyBase
+    {
+        public Button2FunctionProxy() : base()
+        {
+
         }
     }
 

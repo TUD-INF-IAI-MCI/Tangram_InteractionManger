@@ -44,9 +44,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Button2FunctionMapping\ButtonMappingLoader.cs" />
+    <Compile Include="Button2FunctionMapping\IButton2FunctionProvider.cs" />
     <Compile Include="Interaction Manager\AbstractInteractionEventProxy.cs" />
     <Compile Include="Interaction Manager\AdapterMediators\BrailleIOButtonMediatorFactory.cs" />
     <Compile Include="Interaction Manager\AdapterMediators\IBrailleIOButtonMediator.cs" />
+    <Compile Include="Button2FunctionMapping\IButton2FunctionProxy.cs" />
     <Compile Include="Interaction Manager\InteractionContextProxyComparer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Functions\ScriptFunctionProxy.cs" />
@@ -106,14 +109,22 @@
   <ItemGroup>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
       <SubType>Designer</SubType>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <Content Include="Resources\Language.xml">
       <SubType>Designer</SubType>
     </Content>
+    <Content Include="Resources\SampleFunctionMapping.xml">
+      <SubType>Designer</SubType>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\FunctionMappingXSD.xsd">
+      <SubType>Designer</SubType>
+    </None>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it.

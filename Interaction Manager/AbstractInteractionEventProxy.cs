@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace tud.mci.tangram.TangramLector
 {
@@ -28,6 +29,10 @@ namespace tud.mci.tangram.TangramLector
         /// Occurs when a gesture was performed.
         /// </summary>
         public event EventHandler<GestureEventArgs> GesturePerformed;
+
+        /// <summary>Occurs when a specific function should be called after a user interaction.</summary>
+        public event EventHandler<FunctionCallInteractionEventArgs> FunctionCall;
+
 
         /// <summary>
         /// Fires the button released event.
@@ -81,6 +86,52 @@ namespace tud.mci.tangram.TangramLector
                 }
             }
             return cancel;
+        }
+        /// <summary>Fires the function call.</summary>
+        /// <param name="functionName">Name of the function.</param>
+        /// <param name="device">The device.</param>
+        /// <param name="keyCombination">The key combination.</param>
+        /// <param name="pressedGenericKeys">The pressed generic keys.</param>
+        /// <param name="releasedGenericKeys">The released generic keys.</param>
+        /// <param name="canceled">if set to <c>true</c> the further forwarding of the event was canceled by one event handler.</param>
+        /// <returns>
+        ///   <c>true</c> if the function/event was handled by (at least) one event handler, <c>false</c> otherwise.</returns>
+        protected virtual bool fireFunctionCalledEvent(
+            string functionName,
+            BrailleIO.BrailleIODevice device,
+            BrailleIO.Structs.KeyCombinationItem keyCombination,
+            List<String> pressedGenericKeys,
+            List<String> releasedGenericKeys,
+            out bool canceled)
+        {
+            canceled = false;
+            bool handled = false;
+
+            if (FunctionCall != null)
+            {
+                FunctionCallInteractionEventArgs args = new FunctionCallInteractionEventArgs(
+                    functionName, device, keyCombination, pressedGenericKeys, releasedGenericKeys);
+
+                foreach (EventHandler<FunctionCallInteractionEventArgs> hndl in FunctionCall.GetInvocationList())
+                {
+                    try
+                    {
+                        if (hndl != null) { hndl.DynamicInvoke(this, args); }
+                        if (args.Handled == true)
+                        {
+                            handled = true;
+                        }
+                        if (args.Cancel == true)
+                        {
+                            canceled = true;
+                            break;
+                        }
+                    }
+                    catch (Exception) { }
+                }
+
+            }
+            return handled;
         }
         /// <summary>
         /// Fires the button pressed event.

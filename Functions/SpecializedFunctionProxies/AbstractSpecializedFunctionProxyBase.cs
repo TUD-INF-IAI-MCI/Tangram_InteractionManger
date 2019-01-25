@@ -82,6 +82,7 @@ namespace tud.mci.tangram.TangramLector.SpecializedFunctionProxies
                 iep.ButtonPressed += new EventHandler<ButtonPressedEventArgs>(im_ButtonPressed);
                 iep.ButtonReleased += new EventHandler<ButtonReleasedEventArgs>(im_ButtonReleased);
                 iep.GesturePerformed += new EventHandler<GestureEventArgs>(im_GesturePerformed);
+                iep.FunctionCall += new EventHandler<FunctionCallInteractionEventArgs>(im_FunctionCall);
             }
         }
 
@@ -104,6 +105,8 @@ namespace tud.mci.tangram.TangramLector.SpecializedFunctionProxies
                 try { iep.ButtonReleased -= new EventHandler<ButtonReleasedEventArgs>(im_ButtonReleased); }
                 catch { }
                 try { iep.GesturePerformed -= new EventHandler<GestureEventArgs>(im_GesturePerformed); }
+                catch { }
+                try { iep.FunctionCall -= new EventHandler<FunctionCallInteractionEventArgs>(im_FunctionCall); }
                 catch { }
             }
         }
@@ -159,6 +162,17 @@ namespace tud.mci.tangram.TangramLector.SpecializedFunctionProxies
         protected virtual void im_ButtonCombinationReleased(object sender, ButtonReleasedEventArgs e)
         {
             if (Active) { base.fireButtonCombinationReleasedEvent(e); }
+        }
+
+
+        /// <summary>Handles the FunctionCall event of the <see cref="IInteractionEventProxy"/> control.
+        /// Base implementation forwards this event.</summary>
+        /// <param name="sender">The source of the event.</param>
+        /// <param name="e">The <see cref="FunctionCallInteractionEventArgs"/> instance containing the event data.</param>
+        protected virtual void im_FunctionCall(object sender, FunctionCallInteractionEventArgs e)
+        {
+            bool canceled;
+            if (Active) { base.fireFunctionCalledEvent(e.Function,e.Device, e.KeyCombinationItem, e.PressedGenericKeys, e.ReleasedGenericKeys, out canceled); }
         }
 
         /// <summary>

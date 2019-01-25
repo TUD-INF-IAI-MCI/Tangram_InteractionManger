@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using tud.mci.tangram.TangramLector.Classes;
 
 namespace tud.mci.tangram.TangramLector
@@ -35,7 +36,7 @@ namespace tud.mci.tangram.TangramLector
                 catch (Exception ex)
                 {
                     Logger.Instance.Log(LogPriority.ALWAYS, this, "Can not add specialized function proxy", ex);
-                } 
+                }
             }
             return false;
         }
@@ -93,16 +94,20 @@ namespace tud.mci.tangram.TangramLector
         /// Gets the list of all registered interaction context proxies.
         /// </summary>
         /// <returns>list of registered proxies</returns>
-        public OrderedConcurrentDictionary<int,IInteractionContextProxy> GetInteractionContextProxies()
+        public OrderedConcurrentDictionary<int, IInteractionContextProxy> GetInteractionContextProxies()
         {
             lock (_listLock)
             {
-                return proxies; 
+                return proxies;
             }
         }
 
         #region Forward Events to Specialized Function Proxies
-
+        private void sentFunctionCallToRegisteredSpecifiedFunctionProxies(object sender, ref FunctionCallInteractionEventArgs e, out bool canceled)
+        {
+            canceled = false;
+            if (eventForwarder != null) { eventForwarder.fireFunctionCall(sender, e, out canceled); }
+        }
         private void sentButtonCombinationReleasedToRegisteredSpecifiedFunctionProxies(object sender, ref ButtonReleasedEventArgs e)
         {
             if (eventForwarder != null) { eventForwarder.fireButtonCombinationReleasedEvent(sender, e); }
@@ -134,7 +139,8 @@ namespace tud.mci.tangram.TangramLector
         public event EventHandler<ButtonReleasedEventArgs> ButtonCombinationReleased;
         public event EventHandler<ButtonPressedEventArgs> ButtonPressed;
         public event EventHandler<GestureEventArgs> GesturePerformed;
-        
+        public event EventHandler<FunctionCallInteractionEventArgs> FunctionCall;
+
         internal bool fireButtonReleasedEvent(Object sender, ButtonReleasedEventArgs args)
         {
             bool cancel = false;
@@ -179,7 +185,8 @@ namespace tud.mci.tangram.TangramLector
 
                     if (hndl != null && hndl.Target is IInteractionContextProxy)
                     {
-                        if (!((IInteractionContextProxy)hndl.Target).Active) {
+                        if (!((IInteractionContextProxy)hndl.Target).Active)
+                        {
                             continue;
                         }
                     }
@@ -199,6 +206,55 @@ namespace tud.mci.tangram.TangramLector
             return cancel;
         }
 
+        internal bool fireFunctionCall(
+            string functionName,
+            BrailleIO.BrailleIODevice device,
+            BrailleIO.Structs.KeyCombinationItem keyCombination,
+            List<String> pressedGenericKeys,
+            List<String> releasedGenericKeys,
+            out bool canceled)
+        {
+            canceled = false;
+            bool handled = false;
+
+            if (FunctionCall != null)
+            {
+                FunctionCallInteractionEventArgs args = new FunctionCallInteractionEventArgs(
+                    functionName, device, keyCombination, pressedGenericKeys, releasedGenericKeys);
+                handled = fireFunctionCall(device, args, out canceled);
+            }
+            return handled;
+        }
+
+        internal bool fireFunctionCall(object sender, FunctionCallInteractionEventArgs args, out bool canceled)
+        {
+            canceled = false;
+            bool handled = false;
+
+            if (FunctionCall != null)
+            {
+                foreach (EventHandler<FunctionCallInteractionEventArgs> hndl in FunctionCall.GetInvocationList())
+                {
+                    try
+                    {
+                        if (hndl != null) { hndl.DynamicInvoke(this, args); }
+                        if (args.Handled == true)
+                        {
+                            handled = true;
+                        }
+                        if (args.Cancel == true)
+                        {
+                            canceled = true;
+                            break;
+                        }
+                    }
+                    catch (Exception) { }
+                }
+
+            }
+            return handled;
+        }
+
         internal bool fireButtonPressedEvent(Object sender, ButtonPressedEventArgs args)
         {
             bool cancel = false;
@@ -212,7 +268,7 @@ namespace tud.mci.tangram.TangramLector
                     {
                         if (!((IInteractionContextProxy)hndl.Target).Active)
                         {
-                           continue;
+                            continue;
                         }
                     }
 
@@ -262,5 +318,6 @@ namespace tud.mci.tangram.TangramLector
             }
             return cancel;
         }
+
     }
 }
