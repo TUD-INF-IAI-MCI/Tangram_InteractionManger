@@ -99,7 +99,7 @@ namespace tud.mci.tangram.TangramLector
 
         void interactionManager_ButtonCombinationReleased(object sender, ButtonReleasedEventArgs e)
         {
-            if (e != null && e.ReleasedGenericKeys != null && e.ReleasedGenericKeys.Count > 0 && (e.PressedGenericKeys == null || e.PressedGenericKeys.Count < 1))
+            if (e != null && e.KeyCombinationItem.AreButtonsReleased())
             {
                 if (interactionManager.Mode == InteractionMode.Braille)
                 {

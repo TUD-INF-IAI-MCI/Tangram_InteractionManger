@@ -474,7 +474,7 @@ namespace tud.mci.tangram.TangramLector
                     combination.PressedAdditionalKeys = mediator.GetAllPressedAdditionalButtons(combination.PressedAdditionalKeys);
 
                     //releasedGenKeys = mediator.GetAllReleasedGenericButtons(brailleIO_KeyStateChanged_EventArgs);
-                    combination.PressedGeneralKeys = mediator.GetAllReleasedGeneralButtons(combination.PressedGeneralKeys);
+                    combination.ReleasedGeneralKeys = mediator.GetAllReleasedGeneralButtons(combination.ReleasedGeneralKeys);
                     combination.ReleasedKeyboardKeys = mediator.GetAllReleasedBrailleKeyboardButtons(combination.ReleasedKeyboardKeys);
                     combination.ReleasedAdditionalKeys = mediator.GetAllReleasedAdditionalButtons(combination.ReleasedAdditionalKeys);
 
@@ -670,7 +670,7 @@ namespace tud.mci.tangram.TangramLector
                 combinationItem.ReleasedGeneralKeys, combinationItem.ReleasedKeyboardKeys, combinationItem.ReleasedAdditionalKeys, releasedGenericKeys);
             Logger.Instance.Log(LogPriority.OFTEN, this, "Button combination released: " + args.ToString());
 
-            args.ReleasedButtonsToString();
+            // args.ReleasedButtonsToString();
 
             bool cancel = base.fireButtonCombinationReleasedEvent(args);
             if (cancel) { System.Diagnostics.Debug.WriteLine("InteractionManager Event canceled"); }
