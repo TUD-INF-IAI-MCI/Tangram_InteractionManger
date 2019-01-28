@@ -103,23 +103,30 @@ namespace tud.mci.tangram.TangramLector
             {
                 if (interactionManager.Mode == InteractionMode.Braille)
                 {
-                    interpretBrailleKeyboardCommand(e.ReleasedGenericKeys);
+                    e.Cancel = interpretBrailleKeyboardCommand(e);
+                    if (e.Cancel) return;
                 }
-
+                // FIXME: cancel if handled?
                 sentButtonCombinationReleasedToRegisteredSpecifiedFunctionProxies(sender, ref e);
             }
         }
-
 
         private void interactionManager_FunctionCall(object sender, FunctionCallInteractionEventArgs e)
         {
             if (e != null && !String.IsNullOrEmpty(e.Function))
             {
+
+                if (interactionManager.Mode == InteractionMode.Braille)
+                {
+                    e.Handled = e.Cancel = interpretBrailleKeyboardCommand(e);
+                    if (e.Cancel) return;
+                }
+
+                // FIXME: cancel if handled?
                 bool canceled;
                 sentFunctionCallToRegisteredSpecifiedFunctionProxies(sender, ref e, out canceled);
             }
         }
-
 
         #endregion
     }

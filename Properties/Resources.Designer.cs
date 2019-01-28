@@ -61,18 +61,40 @@ namespace tud.mci.tangram.TangramLector.Properties {
         }
         
         /// <summary>
+        ///   Sucht eine lokalisierte Zeichenfolge, die &lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot; ?&gt;
+        ///&lt;mappings&gt;
+        ///  &lt;function 
+        ///    name=&quot;callMeFunction&quot;
+        ///    description=&quot;some function to handle something&quot;&gt;
+        ///    &lt;mapping device=&quot;_default&quot;&gt;
+        ///      f1,f2, fn3, gesture,none,unknown,
+        ///    &lt;/mapping&gt;
+        ///    &lt;mapping device=&quot;BrailleDis&quot; priority=&quot;1&quot;&gt;
+        ///      k1,k2,k3
+        ///    &lt;/mapping&gt;
+        ///  &lt;/function&gt;
+        ///&lt;/mappings&gt;
+        /// ähnelt.
+        /// </summary>
+        internal static string BrailleKeyboardFunctionMapping {
+            get {
+                return ResourceManager.GetString("BrailleKeyboardFunctionMapping", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Sucht eine lokalisierte Zeichenfolge, die &lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot;?&gt;
         ///&lt;xs:schema attributeFormDefault=&quot;unqualified&quot; elementFormDefault=&quot;qualified&quot; xmlns:xs=&quot;http://www.w3.org/2001/XMLSchema&quot;&gt;
         ///  &lt;xs:element name=&quot;mappings&quot;&gt;
         ///    &lt;xs:complexType&gt;
         ///      &lt;xs:sequence&gt;
-        ///        &lt;xs:element name=&quot;function&quot;&gt;
+        ///        &lt;xs:element maxOccurs=&quot;unbounded&quot; name=&quot;function&quot;&gt;
         ///          &lt;xs:complexType&gt;
         ///            &lt;xs:sequence&gt;
         ///              &lt;xs:element maxOccurs=&quot;unbounded&quot; name=&quot;mapping&quot;&gt;
         ///                &lt;xs:complexType&gt;
         ///                  &lt;xs:simpleContent&gt;
-        ///                    &lt;xs:extension base=&quot;xs:s [Rest der Zeichenfolge wurde abgeschnitten]&quot;; ähnelt.
+        ///                    &lt;x [Rest der Zeichenfolge wurde abgeschnitten]&quot;; ähnelt.
         /// </summary>
         internal static string FunctionMappingXSD {
             get {
@@ -102,28 +124,6 @@ namespace tud.mci.tangram.TangramLector.Properties {
         internal static string Language {
             get {
                 return ResourceManager.GetString("Language", resourceCulture);
-            }
-        }
-        
-        /// <summary>
-        ///   Sucht eine lokalisierte Zeichenfolge, die &lt;?xml version=&quot;1.0&quot; encoding=&quot;utf-8&quot; ?&gt;
-        ///&lt;mappings&gt;
-        ///  &lt;function 
-        ///    name=&quot;callMeFunction&quot;
-        ///    description=&quot;some function to handle something&quot;&gt;
-        ///    &lt;mapping device=&quot;_default&quot;&gt;
-        ///      f1,f2,f3
-        ///    &lt;/mapping&gt;
-        ///    &lt;mapping device=&quot;BrailleDis&quot; priority=&quot;1&quot;&gt;
-        ///      k1,k2,k3
-        ///    &lt;/mapping&gt;
-        ///  &lt;/function&gt;
-        ///&lt;/mappings&gt;
-        /// ähnelt.
-        /// </summary>
-        internal static string SampleFunctionMapping {
-            get {
-                return ResourceManager.GetString("SampleFunctionMapping", resourceCulture);
             }
         }
     }

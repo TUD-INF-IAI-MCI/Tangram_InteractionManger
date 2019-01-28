@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BrailleIO.Interface;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -12,8 +13,22 @@ namespace tud.mci.tangram.TangramLector
     /// </summary>
     public partial class ScriptFunctionProxy
     {
+
+        #region Modifier marks --- TODO: find a better solution
+
+        static int CtrlModifier { get; set; }
+        static int AltModifier { get; set; }
+        static int ShiftModifier { get; set; }
+        static int WinModifier { get; set; }
+
+
+        #endregion
+
+
         //TODO: get the table by config or a default
-        public readonly Control.BrailleKeyboard BrailleKeyboard = new Control.BrailleKeyboard(Control.BrailleKeyboard.GetCurrentDllDirectory() + @"/config/tables/de-chardefs8.cti");
+        public readonly Control.BrailleKeyboard BrailleKeyboard =
+            new Control.BrailleKeyboard(Control.BrailleKeyboard.GetCurrentDllDirectory() +
+                @"/config/tables/de-chardefs8.cti");
 
         //TODO: handle unimplemented commands
         private void interpretBrailleKeyboardCommand(List<String> keys)
@@ -176,6 +191,130 @@ namespace tud.mci.tangram.TangramLector
             }
         }
 
+
+        private bool interpretBrailleKeyboardCommand(ButtonReleasedEventArgs e)
+        {
+
+            CtrlModifier = 40960; // (int)(BrailleIO_BrailleKeyboardButton.k7 | BrailleIO_BrailleKeyboardButton.k8);
+            AltModifier = -1;
+            ShiftModifier = -2;
+            WinModifier = -3;
+
+
+            // TODO: make the character mapping
+
+            BrailleIO_BrailleKeyboardButton btns;
+            // check for modifier
+            BrailleCommand command = filterCommand(e.ReleasedBrailleKeyboardKeys, out btns);
+
+            // get the char
+            String braille = getBrailleStringFormKeyCombination(btns);
+
+            // fire event
+            if (command != BrailleCommand.None)
+            {
+                fireBrailleKeybordCommandEvent(command, braille);
+                return true;
+            }
+            else if (!String.IsNullOrEmpty(braille))
+            {
+                fireBrailleKeybordKeyEvent(braille);
+                return true;
+            }
+            return false;
+        }
+
+        private bool interpretBrailleKeyboardCommand(FunctionCallInteractionEventArgs e)
+        {
+
+
+            if (e != null && !String.IsNullOrEmpty(e.Function) && !e.AreButtonsPressed())
+            {
+                // TODO: make this global, configurable and only once
+
+
+                //BrailleCommand command = BrailleCommand.None;
+                String c = null;
+                // List<String> restKeys = keys;
+
+                /////// stand alone functions
+                switch (e.Function)
+                {
+                    case "bkb_return":
+                        fireBrailleKeybordCommandEvent(BrailleCommand.Return, c);
+                        return true;
+
+                    case "bkb_space":
+                        fireBrailleKeybordKeyEvent(" ");
+                        return true;
+
+                    case "bkb_backspace":
+                        fireBrailleKeybordCommandEvent(BrailleCommand.Backspace, c);
+                        return true;
+
+                    case "bkb_esc":
+                        fireBrailleKeybordCommandEvent(BrailleCommand.ESC, c);
+                        return true;
+
+                    case "bkb_left":
+                        fireBrailleKeybordCommandEvent(BrailleCommand.CursorLeft, c);
+                        return true;
+
+                    case "bkb_right":
+                        fireBrailleKeybordCommandEvent(BrailleCommand.CursorRight, c);
+                        return true;
+
+                    case "bkb_up":
+                        fireBrailleKeybordCommandEvent(BrailleCommand.CursorUp, c);
+                        return true;
+
+                    case "bkb_down":
+                        fireBrailleKeybordCommandEvent(BrailleCommand.CursorDown, c);
+                        return true;
+
+                    case "bkb_pageup":
+                        fireBrailleKeybordCommandEvent(BrailleCommand.PageUp, c);
+                        return true;
+
+                    case "bkb_pagedown":
+                        fireBrailleKeybordCommandEvent(BrailleCommand.PageDown, c);
+                        return true;
+
+                    case "bkb_del":
+                        fireBrailleKeybordCommandEvent(BrailleCommand.Del, c);
+                        return true;
+
+                    case "bkb_pos1":
+                        fireBrailleKeybordCommandEvent(BrailleCommand.Pos1, c);
+                        return true;
+
+                    case "bkb_end":
+                        fireBrailleKeybordCommandEvent(BrailleCommand.End, c);
+                        return true;
+
+                    case "bkb_tab":
+                        fireBrailleKeybordCommandEvent(BrailleCommand.Tab, c);
+                        return true;
+
+                    case "bkb_shiftTab":
+                        fireBrailleKeybordCommandEvent(BrailleCommand.ShiftTab, c);
+                        return true;
+
+                    default:
+                        break;
+                }
+
+
+                return interpretBrailleKeyboardCommand(e as ButtonReleasedEventArgs);
+
+                //System.Diagnostics.Debug.WriteLine("Dot pattern: " + dotPattern + " is '" + c + "'");
+
+
+            }
+            return false;
+        }
+
+
         #region Event Throwing
 
         /// <summary>
@@ -190,9 +329,7 @@ namespace tud.mci.tangram.TangramLector
         private void fireBrailleKeybordKeyEvent(String c)
         {
             Logger.Instance.Log(LogPriority.MIDDLE, this, "[BRAILLE KEYBOARD] BrailleKeyboardKey: '" + c + "'");
-#if DEBUG
             System.Diagnostics.Debug.WriteLine("::: BrailleKeyboard: '" + c + "'");
-#endif
             try
             {
                 if (BrailleKeyboardKey != null && !String.IsNullOrEmpty(c))
@@ -205,9 +342,7 @@ namespace tud.mci.tangram.TangramLector
         private void fireBrailleKeybordCommandEvent(BrailleCommand command, String c)
         {
             Logger.Instance.Log(LogPriority.MIDDLE, this, "[BRAILLE KEYBOARD] BrailleKeyboardCommand: " + command.ToString() + " + '" + c + "'");
-#if DEBUG
             System.Diagnostics.Debug.WriteLine("::: BrailleKeyboardCommand: " + command.ToString() + " + '" + c + "'");
-#endif
             try
             {
                 if (BrailleKeyboardCommand != null && command != BrailleCommand.None)
@@ -219,6 +354,72 @@ namespace tud.mci.tangram.TangramLector
         }
 
         #endregion
+
+        #region utils
+
+        string getBrailleStringFormKeyCombination(BrailleIO_BrailleKeyboardButton kbbtn)
+        {
+            string result = String.Empty;
+
+            if (kbbtn != BrailleIO_BrailleKeyboardButton.None &&
+                !kbbtn.HasFlag(BrailleIO_BrailleKeyboardButton.Unknown))
+            {
+                string dotPattern = String.Empty;
+
+                if (kbbtn.HasFlag(BrailleIO_BrailleKeyboardButton.k1)) dotPattern += "1";
+                if (kbbtn.HasFlag(BrailleIO_BrailleKeyboardButton.k2)) dotPattern += "2";
+                if (kbbtn.HasFlag(BrailleIO_BrailleKeyboardButton.k3)) dotPattern += "3";
+                if (kbbtn.HasFlag(BrailleIO_BrailleKeyboardButton.k4)) dotPattern += "4";
+                if (kbbtn.HasFlag(BrailleIO_BrailleKeyboardButton.k5)) dotPattern += "5";
+                if (kbbtn.HasFlag(BrailleIO_BrailleKeyboardButton.k6)) dotPattern += "6";
+                if (kbbtn.HasFlag(BrailleIO_BrailleKeyboardButton.k7)) dotPattern += "7";
+                if (kbbtn.HasFlag(BrailleIO_BrailleKeyboardButton.k8)) dotPattern += "8";
+
+                result = BrailleKeyboard != null ? BrailleKeyboard.GetCharFromDots(dotPattern) : null;
+            }
+
+            return result;
+        }
+
+        BrailleCommand filterCommand(BrailleIO_BrailleKeyboardButton kbbtn,
+            out BrailleIO_BrailleKeyboardButton filtered)
+        {
+            filtered = kbbtn;
+            BrailleCommand cmd = BrailleCommand.None;
+            int btncode = (int)kbbtn;
+
+            if ((btncode & CtrlModifier) == CtrlModifier)
+            {
+                cmd |= BrailleCommand.Ctr;
+                btncode &= ~CtrlModifier;
+            }
+
+            if ((btncode & AltModifier) == AltModifier)
+            {
+                cmd |= BrailleCommand.Alt;
+                btncode &= ~AltModifier;
+            }
+
+            if ((btncode & ShiftModifier) == ShiftModifier)
+            {
+                cmd |= BrailleCommand.Shift;
+                btncode &= ~ShiftModifier;
+            }
+
+            if ((btncode & WinModifier) == WinModifier)
+            {
+                cmd |= BrailleCommand.Win;
+                btncode &= ~WinModifier;
+            }
+
+            filtered = (BrailleIO_BrailleKeyboardButton)btncode;
+
+            return cmd;
+        }
+
+
+        #endregion
+
 
     }
 
@@ -243,7 +444,10 @@ namespace tud.mci.tangram.TangramLector
         Pos1,
         End,
         Tab,
-        ShiftTab
+        ShiftTab,
+        Shift,
+        Alt,
+        Win
     }
 
     #endregion
