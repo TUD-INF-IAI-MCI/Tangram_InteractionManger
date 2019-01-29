@@ -1540,9 +1540,13 @@ namespace tud.mci.tangram.TangramLector
         /// </summary>
         Gesture = 4,
         /// <summary>
-        /// Manipulation mode was activated - elements e.g. in a document will be manipulated dirctly by inputs 
+        /// Manipulation mode was activated - elements e.g. in a document will be manipulated directly by inputs 
         /// </summary>
-        Manipulation = 8
+        Manipulation = 8,
+        /// <summary>
+        /// If the mode is not defined
+        /// </summary>
+        Unknown = 16,
     }
 
     /// <summary>
