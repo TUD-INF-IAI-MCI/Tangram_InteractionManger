@@ -147,8 +147,9 @@ namespace tud.mci.tangram.TangramLector
         /// </summary>
         private InteractionManager()
         {
+            // load the braille keyboard function mappings
+            AddButton2FunctionMapping(Properties.Resources.BrailleKeyboardFunctionMapping);
             createInputQueueThread();
-            //this.ButtonReleased += new EventHandler<ButtonReleasedEventArgs>(InteractionManager_ButtonReleased);
         }
 
         ~InteractionManager()
@@ -599,6 +600,7 @@ namespace tud.mci.tangram.TangramLector
             enqueueInteractionQueueItem(InteractionQueueObjectType.ButtonCombination, e, sender);
         }
 
+        /// TODO: add this again for non BrailleIOAdapter2 devices?!
         //void InteractionManager_ButtonReleased(object sender, ButtonReleasedEventArgs e)
         //{
         //    // stop this handling here and use the generic handling by Braille IO
