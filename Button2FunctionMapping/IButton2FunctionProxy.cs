@@ -1,8 +1,9 @@
 ﻿using BrailleIO;
 using BrailleIO.Interface;
 using System;
-using System.Linq;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using tud.mci.tangram.TangramLector.Button2FunctionMapping;
 
@@ -92,6 +93,12 @@ namespace tud.mci.tangram.TangramLector.Interaction_Manager
         /// Dictionary of defined function names and if a certain device or adapter type is overwriting it.
         /// </summary>
         protected Dictionary<string, List<string>> functionToDeviceDefinitionDic = new Dictionary<string, List<string>>();
+
+        /// <summary>
+        /// The caching table for function mappings
+        /// </summary>
+        protected readonly ConcurrentDictionary<int, Dictionary<string, List<string>>> _cachingTable = new ConcurrentDictionary<int, Dictionary<string, List<string>>>();
+
 
         private ReaderWriterLockSlim mappingLock = new ReaderWriterLockSlim();
 
@@ -197,9 +204,17 @@ namespace tud.mci.tangram.TangramLector.Interaction_Manager
         /// <returns>The found function-name mapping, if exist; otherwise the empty string is returned.</returns>
         public List<string> GetFunctionMapping(BrailleIODevice device, string buttonCombination)
         {
-            List<string> fnc = new List<string>();
+            List<string> fnc;
             if (device != null && !String.IsNullOrWhiteSpace(buttonCombination))
             {
+
+                if(getCachedMapping(device, buttonCombination, out fnc))
+                {
+                    return fnc;
+                }
+
+                if (fnc == null) fnc = new List<string>();
+
                 // get default function mappings
                 List<String> defFnc = GetDefaultFunctionMapping(buttonCombination);
                 // get function mappings of the adapter
@@ -229,16 +244,19 @@ namespace tud.mci.tangram.TangramLector.Interaction_Manager
                 defFnc = cleanFunctionDefintion(defFnc, device.Name);
 
                 // add default functions
-                if(defFnc != null) fnc = fnc.Union(defFnc).ToList();
+                if (defFnc != null) fnc = fnc.Union(defFnc).ToList();
                 // add adapter functions
-                if(adptrFnc != null) fnc = fnc.Union(adptrFnc).ToList();
+                if (adptrFnc != null) fnc = fnc.Union(adptrFnc).ToList();
                 // add device functions
-                if(devFnc != null) fnc = fnc.Union(devFnc).ToList();
+                if (devFnc != null) fnc = fnc.Union(devFnc).ToList();
             }
             else
             {
                 fnc = GetDefaultFunctionMapping(buttonCombination);
             }
+
+            // cache the result
+            addToMappingCache(device, buttonCombination, fnc);
 
             return fnc;
         }
@@ -270,7 +288,7 @@ namespace tud.mci.tangram.TangramLector.Interaction_Manager
                 if (!String.IsNullOrEmpty(adapterTypeName))
                 {
                     var def = ((IButton2FunctionProxy)this).GetFunctionMappingsForAdapter(adapterTypeName);
-                    if(def != null && def.Count > 0 && def.ContainsKey(buttonCombination))
+                    if (def != null && def.Count > 0 && def.ContainsKey(buttonCombination))
                         adptrFnc = def[buttonCombination];
                 }
 
@@ -278,9 +296,9 @@ namespace tud.mci.tangram.TangramLector.Interaction_Manager
                 defFnc = cleanFunctionDefintion(defFnc, adapterTypeName);
 
                 // add default functions
-                if(defFnc != null) fnc = fnc.Union(defFnc).ToList();
+                if (defFnc != null) fnc = fnc.Union(defFnc).ToList();
                 // add adapter functions
-                if(adptrFnc != null) fnc = fnc.Union(adptrFnc).ToList();
+                if (adptrFnc != null) fnc = fnc.Union(adptrFnc).ToList();
             }
             else
             {
@@ -288,38 +306,6 @@ namespace tud.mci.tangram.TangramLector.Interaction_Manager
             }
 
             return fnc;
-
-
-            //if (!string.IsNullOrWhiteSpace(buttonCombination))
-            //{
-            //    mappingLock.EnterReadLock();
-            //    try
-            //    {
-
-            //        get default function mappings
-            //    var defMappings = GetDefaultFunctionMapping(buttonCombination);
-            //        if (String.IsNullOrEmpty(adapterTypeName)) return defMappings;
-
-            //        get adapter mappings
-            //       var definition = ((IButton2FunctionProxy)this).GetFunctionMappingsForAdapter(adapterTypeName);
-            //        if (definition != null)
-            //        {
-
-            //            get functions
-
-
-            //        if (definition.ContainsKey(buttonCombination))
-            //                return definition[buttonCombination];
-            //        }
-            //        return defMappings;
-            //    }
-            //    finally
-            //    {
-            //        mappingLock.ExitReadLock();
-            //    }
-
-            //}
-            //return null;
         }
 
         /// <summary>Gets the default function mapping for the given button-combination, if exist.</summary>
@@ -347,6 +333,61 @@ namespace tud.mci.tangram.TangramLector.Interaction_Manager
             //    mappingLock.ExitReadLock();
             //}
         }
+
+        #region Caching
+
+        protected bool getCachedMapping(BrailleIODevice device, string combination, out List<string> function)
+        {
+            function = new List<string>();
+            bool success = false;
+
+            if (!String.IsNullOrEmpty(combination))
+            {
+                // check if device is listed
+                Dictionary<string, List<string>> mappings;
+                if (_cachingTable.TryGetValue(device.GetHashCode(), out mappings))
+                {
+                    if (mappings != null)
+                        // check for 
+                        success = mappings.TryGetValue(combination, out function);
+                }
+            }
+            return success;
+        }
+
+
+        protected bool addToMappingCache(BrailleIODevice device, string combination, List<string> functionName)
+        {
+            if(!string.IsNullOrEmpty(combination))
+            {
+                int hash = device.GetHashCode();
+                if (_cachingTable.ContainsKey(hash))
+                {
+                    _cachingTable.AddOrUpdate(
+                        hash,
+                        new Dictionary<string, List<string>>(1) { { combination, functionName } },
+                        (key, oldValue) => { oldValue.Add(combination, functionName); return oldValue; });
+                }
+                else
+                {
+                    Dictionary<string, List<string>> mapping = new Dictionary<string, List<string>>();
+                    mapping.Add(combination, functionName);
+                    _cachingTable.AddOrUpdate(
+                        hash, 
+                        mapping, 
+                        (key, oldValue) => mapping);
+                }
+            }
+            return true;
+        }  
+
+        void cleanMappingCache()
+        {
+            _cachingTable.Clear();
+        }
+
+
+        #endregion
 
         #region Utils 
 
@@ -389,6 +430,7 @@ namespace tud.mci.tangram.TangramLector.Interaction_Manager
         ///   <c>true</c> if the mapping was loaded successfully, <c>false</c> otherwise.</returns>
         public virtual bool LoadFunctionMapping(string mappingXML, bool combine = true)
         {
+            cleanMappingCache();
             if (mappingLoader != null)
             {
                 try

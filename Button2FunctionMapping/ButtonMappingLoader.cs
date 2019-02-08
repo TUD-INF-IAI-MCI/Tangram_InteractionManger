@@ -147,10 +147,10 @@ namespace tud.mci.tangram.TangramLector.Button2FunctionMapping
                                                 mappings.Add(device, deviceFunctionMappingDict);
                                             }
 
-                                            // check if an additional priority exists
-                                            // NOTICE: not used yet
-                                            var priorityAttr = mappingNode.Attributes["priority"];
-                                            int priority = priorityAttr == null ? 0 : Convert.ToInt32(priorityAttr.Value);
+                                            //// check if an additional priority exists
+                                            //// NOTICE: not used yet
+                                            //var priorityAttr = mappingNode.Attributes["priority"];
+                                            //int priority = priorityAttr == null ? 0 : Convert.ToInt32(priorityAttr.Value);
 
                                             // get the button combination
                                             var buttonString = mappingNode.InnerText.ToLower();
@@ -167,6 +167,31 @@ namespace tud.mci.tangram.TangramLector.Button2FunctionMapping
                                             buttons.Sort(buttonComparer);
                                             // clear from "None" and "Unknown" ?
                                             buttonString = String.Join(",", buttons);
+
+
+                                            // check if an pressed button state is defined
+                                            var pressedAttr = mappingNode.Attributes["pressed"];
+                                            string pressed = pressedAttr == null ? string.Empty : pressedAttr.Value;
+                                            if (!string.IsNullOrWhiteSpace(pressed))
+                                            {
+                                                pressed = Regex.Replace(pressed, @"\s+", string.Empty);
+
+                                                // validate the definition
+                                                var pbuttons = new List<string>();
+                                                foreach (var btn in pressed.Split(','))
+                                                {
+                                                    var _btn = StyleButtonName(btn);
+                                                    if (!String.IsNullOrEmpty(_btn) && !pbuttons.Contains(_btn))
+                                                        pbuttons.Add(_btn);
+                                                }
+                                                pbuttons.Sort(buttonComparer);
+                                                // clear from "None" and "Unknown" ?
+                                                var pbuttonString = String.Join(",", pbuttons);
+                                                if (!string.IsNullOrEmpty(pbuttonString))
+                                                {
+                                                    buttonString += "/" + pbuttonString;
+                                                }
+                                            }
 
                                             // add mapping to list
                                             if (deviceFunctionMappingDict.ContainsKey(buttonString))

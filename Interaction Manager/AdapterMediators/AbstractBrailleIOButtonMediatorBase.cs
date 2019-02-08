@@ -1,5 +1,6 @@
 ﻿using BrailleIO;
 using BrailleIO.Interface;
+using BrailleIO.Structs;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -357,7 +358,6 @@ namespace tud.mci.tangram.TangramLector
         /// <summary>Gets all adapter types this mediator is related to.</summary>
         /// <returns>a list of adapter class types this mediator is related to</returns>
         public abstract List<Type> GetRelatedAdapterTypes();
-
 
     }
 }
