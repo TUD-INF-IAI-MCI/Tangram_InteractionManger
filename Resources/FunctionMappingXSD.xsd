@@ -3,7 +3,7 @@
   <xs:element name="mappings">
     <xs:complexType>
       <xs:sequence>
-        <xs:element maxOccurs="unbounded" name="function">
+        <xs:element minOccurs="0" maxOccurs="unbounded" name="function">
           <xs:complexType>
             <xs:sequence>
               <xs:element maxOccurs="unbounded" name="mapping">
