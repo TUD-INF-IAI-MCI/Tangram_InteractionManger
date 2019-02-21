@@ -313,7 +313,7 @@ namespace tud.mci.tangram.TangramLector
                             break;
                         }
                     }
-                    catch (Exception ex) { }
+                    catch { }
                 }
             }
             return cancel;

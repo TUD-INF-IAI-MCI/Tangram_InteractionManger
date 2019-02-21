@@ -47,7 +47,7 @@ namespace tud.mci.tangram.TangramLector
 
         #region public
 
-        private BrailleKeyboardInput _bki = new BrailleKeyboardInput();
+        private readonly BrailleKeyboardInput _bki = new BrailleKeyboardInput();
         /// <summary>
         /// Gets the current active Braille keyboard input (an interpreted complete entered text input by a Braille keyboard).
         /// </summary>
@@ -266,9 +266,11 @@ namespace tud.mci.tangram.TangramLector
             }
             else
             {
-                inputQueueThread = new Thread(new ThreadStart(checkInputQueue));
-                inputQueueThread.Name = "TangramLectorInputQueueThread";
-                inputQueueThread.IsBackground = true;
+                inputQueueThread = new Thread(new ThreadStart(checkInputQueue))
+                {
+                    Name = "TangramLectorInputQueueThread",
+                    IsBackground = true
+                };
                 inputQueueThread.Start();
             }
         }

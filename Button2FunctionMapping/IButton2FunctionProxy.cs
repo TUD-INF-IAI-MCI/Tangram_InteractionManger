@@ -100,23 +100,12 @@ namespace tud.mci.tangram.TangramLector.Interaction_Manager
         protected readonly ConcurrentDictionary<int, Dictionary<string, List<string>>> _cachingTable = new ConcurrentDictionary<int, Dictionary<string, List<string>>>();
 
 
-        private ReaderWriterLockSlim mappingLock = new ReaderWriterLockSlim();
+        private readonly ReaderWriterLockSlim mappingLock = new ReaderWriterLockSlim();
 
         /// <summary>
         /// The mapping loader used to interpret the mapping definition XMl files. 
         /// </summary>
         protected readonly ButtonMappingLoader mappingLoader = new ButtonMappingLoader();
-
-        ///// <summary>Occurs when a specific function should be called after a user interaction.</summary>
-        ///// <remarks>If the function was handled, set the <see cref="FunctionCallInteractionEventArgs.Handled"/> 
-        ///// flag in the event args to <c>true</c>. 
-        ///// By doing so, the <see cref="IInteractionEventProxy.ButtonCombinationReleased"/> is not thrown afterwards.
-        ///// You can also cancel further forwarding to other event handlers by setting the 
-        ///// <see cref="System.ComponentModel.CancelEventArgs.Cancel"/> flag of the event args. Canceling the event but 
-        ///// not setting the <see cref="FunctionCallInteractionEventArgs.Handled"/> flag, will not preventing to throw
-        ///// the <see cref="IInteractionEventProxy.ButtonCombinationReleased"/> event.</remarks>
-        //public event EventHandler<FunctionCallInteractionEventArgs> FunctionCall;
-
 
         #region IButton2FunctionProxy
 
@@ -370,8 +359,10 @@ namespace tud.mci.tangram.TangramLector.Interaction_Manager
                 }
                 else
                 {
-                    Dictionary<string, List<string>> mapping = new Dictionary<string, List<string>>();
-                    mapping.Add(combination, functionName);
+                    Dictionary<string, List<string>> mapping = new Dictionary<string, List<string>>
+                    {
+                        { combination, functionName }
+                    };
                     _cachingTable.AddOrUpdate(
                         hash, 
                         mapping, 

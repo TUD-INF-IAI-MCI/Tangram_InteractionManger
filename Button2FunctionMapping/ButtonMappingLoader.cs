@@ -205,9 +205,7 @@ namespace tud.mci.tangram.TangramLector.Button2FunctionMapping
                                             mappings[device] = deviceFunctionMappingDict;
                                         }
                                     }
-                                    catch (Exception e)
-                                    {
-                                    }
+                                    catch {}
                                 }
                             }
                         }
@@ -215,7 +213,7 @@ namespace tud.mci.tangram.TangramLector.Button2FunctionMapping
                 }
                 return mappings;
             }
-            catch (Exception ex)
+            catch
             { }
             return null;
         }
